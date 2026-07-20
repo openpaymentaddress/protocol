@@ -1,7 +1,7 @@
 # OPAP/1 URL identity requirements
 
-**Status:** agreed design input for the OPAP/1 URL-identity rewrite  
-**Date:** 20 July 2026  
+**Status:** agreed design input for the OPAP/1 URL-identity rewrite
+**Date:** 20 July 2026
 **Scope:** protocol and publication model; not a hosted-provider product implementation
 
 ## Decision record
