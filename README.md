@@ -23,7 +23,7 @@ flowchart TB
     EMPLOYER["Employer"] -->|pays| ADDRESS
     GOVERNMENT["Government"] -->|pays| ADDRESS
 
-    ADDRESS["OPAP payment-address layer<br/>https://recipient.example/pay<br/><br/>The recipient controls the destination"]
+    ADDRESS["Universal payment address<br/>https://recipient.example/pay<br/><br/>The recipient controls the destination"]
 
     ADDRESS -->|resolves to| BANK["Bank account"]
     ADDRESS -->|resolves to| WALLET["Wallet"]
