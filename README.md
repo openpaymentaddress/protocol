@@ -4,6 +4,24 @@
 
 **Status:** OPAP/1 implementation draft. The specification, schema and conformance fixtures in this repository are the canonical source for this revision. Production payment execution is outside the protocol and is not enabled by this repository.
 
+## Why OPAP
+
+Payment instructions are usually detached from the page, person, business, or community they represent. They live in a payment provider's link, a platform's account, a QR code, or a message that can be changed, removed, or made unavailable by an intermediary.
+
+OPAP lets the owner of a public HTTPS URL publish verifiable payment instructions for that exact URL. A creator can make `/support` payable, a business can make an invoice URL payable, and a collective can make one public page resolve to a transparent split. Payers see the destination and verification evidence before they choose whether and how to pay.
+
+### A freedom protocol
+
+OPAP is designed to remove the central payment-address directory as a control point. A publisher does not need permission from a single platform, wallet, processor, or payment network to make a URL discoverable: they publish a small, open record on a domain they control. Independent applications can resolve that record, and the recipient remains free to choose compatible payment methods.
+
+This makes OPAP useful to people and organisations concerned about deplatforming or debanking. It keeps the public payment identity with the publisher's domain instead of tying it to a provider account or a central alias registry.
+
+OPAP does **not** promise that every layer is censorship-proof. Domain registrars, DNS operators, hosting providers, certificate authorities, wallets, banks, and payment rails may still impose their own rules or restrictions. OPAP reduces one important choke point—the centralised payment-address layer—while leaving payment execution and regulatory obligations to the applications and rails that perform them.
+
+### Adoption without a gatekeeper
+
+OPAP works with infrastructure publishers already use: HTTPS, a well-known path, JSON, and optionally DNSSEC. Adoption can start with one payable page and one compatible resolver; it does not require joining a directory, migrating to a new payment rail, or replacing an existing website. The protocol is designed so that any application can implement it and any domain owner can publish it.
+
 ## What OPAP does
 
 An **Open Payment Identifier (OPID)** is a canonical HTTPS URL, such as:
