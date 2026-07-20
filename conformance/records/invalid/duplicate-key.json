@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "id": "https://merchant.example/",
+  "id": "https://attacker.example/",
+  "payment": { "type": "delegate", "target": "https://merchant.example/" }
+}

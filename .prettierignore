@@ -1,0 +1,7 @@
+node_modules/
+dist/
+coverage/
+packages/opap-core/src/generated/
+open-payment-address-v1.schema.json
+open-payment-address-*.md
+uitbetalingsneutraliteit.md

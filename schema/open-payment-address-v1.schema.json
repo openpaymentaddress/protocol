@@ -1,0 +1,214 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openpaymentaddress.org/schema/opap-v1.json",
+  "title": "Open Payment Address Protocol v1",
+  "description": "Normative structural schema for an OPAP Record under the OPAP/1 URL-identity revision.",
+  "$comment": "An OPAP Record is the machine-readable JSON document behind one canonical HTTPS OPID. Implementations MUST also enforce URL canonicalisation, same-origin deterministic record discovery, transport and CORS requirements, duplicate-key rejection, exact id equality, origin-key proof verification, IBAN checksum, trusted asset-registry validation, asset-currency matching, share sum, unique recipients and contract-state validation. The asset registry is client policy and is intentionally not embedded in an OPAP Record.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "id", "payment"],
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1
+    },
+    "id": {
+      "$ref": "#/$defs/opid",
+      "description": "The canonical OPID represented by this OPAP Record."
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "pattern": "^[^\\u0000-\\u001F\\u007F]+$"
+    },
+    "payment": {
+      "oneOf": [
+        { "$ref": "#/$defs/directPayment" },
+        { "$ref": "#/$defs/delegatePayment" },
+        { "$ref": "#/$defs/splitPayment" }
+      ]
+    },
+    "extensions": {
+      "type": "object",
+      "maxProperties": 32,
+      "propertyNames": {
+        "$ref": "#/$defs/namespaceId"
+      },
+      "additionalProperties": true
+    }
+  },
+  "$defs": {
+    "opid": {
+      "type": "string",
+      "description": "A canonical absolute HTTPS URL OPID. Runtime validation additionally enforces the constrained hostname and path grammar.",
+      "minLength": 10,
+      "maxLength": 512,
+      "pattern": "^https://[^/?#:]+/(?:[A-Za-z0-9._~/-]|%[0-9A-F]{2})*$"
+    },
+    "namespaceId": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 128,
+      "pattern": "^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?/[a-z0-9](?:[a-z0-9._-]{0,62}[a-z0-9])?$"
+    },
+    "ethereumAddress": {
+      "type": "string",
+      "minLength": 42,
+      "maxLength": 42,
+      "pattern": "^0x[a-fA-F0-9]{40}$"
+    },
+    "chainId": {
+      "type": "string",
+      "maxLength": 40,
+      "pattern": "^eip155:[1-9][0-9]*$"
+    },
+    "iban": {
+      "type": "string",
+      "minLength": 15,
+      "maxLength": 34,
+      "pattern": "^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$"
+    },
+    "currency": {
+      "type": "string",
+      "description": "Settlement currency as an uppercase ISO 4217 alphabetic code.",
+      "minLength": 3,
+      "maxLength": 3,
+      "pattern": "^[A-Z]{3}$"
+    },
+    "directPayment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "methods"],
+      "properties": {
+        "type": { "const": "direct" },
+        "methods": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "$comment": "Methods are ordered from the receiver's strongest to weakest settlement preference.",
+          "items": {
+            "oneOf": [
+              { "$ref": "#/$defs/sepaPaymentHandler" },
+              { "$ref": "#/$defs/erc20PaymentHandler" },
+              { "$ref": "#/$defs/extensionPaymentHandler" }
+            ]
+          }
+        }
+      }
+    },
+    "sepaPaymentHandler": {
+      "type": "object",
+      "$comment": "A SEPA Payment Handler.",
+      "additionalProperties": false,
+      "required": ["type", "currency", "name", "iban"],
+      "properties": {
+        "type": { "const": "sepa" },
+        "currency": { "const": "EUR" },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "pattern": "^[^\\u0000-\\u001F\\u007F]+$"
+        },
+        "iban": { "$ref": "#/$defs/iban" }
+      }
+    },
+    "erc20PaymentHandler": {
+      "type": "object",
+      "$comment": "An ERC-20 Payment Handler. Asset identity is the exact chain + asset pair. symbol is an untrusted display hint. Execution requires an active entry in the payer's authenticated, version-pinned asset registry.",
+      "additionalProperties": false,
+      "required": ["type", "currency", "chain", "asset", "recipient"],
+      "properties": {
+        "type": { "const": "erc20" },
+        "currency": { "$ref": "#/$defs/currency" },
+        "chain": { "$ref": "#/$defs/chainId" },
+        "asset": { "$ref": "#/$defs/ethereumAddress" },
+        "recipient": { "$ref": "#/$defs/ethereumAddress" },
+        "symbol": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[^\\u0000-\\u001F\\u007F]+$"
+        }
+      }
+    },
+    "extensionPaymentHandler": {
+      "type": "object",
+      "$comment": "A namespaced extension Payment Handler.",
+      "additionalProperties": false,
+      "required": ["type", "currency", "data"],
+      "properties": {
+        "type": {
+          "$ref": "#/$defs/namespaceId"
+        },
+        "currency": { "$ref": "#/$defs/currency" },
+        "data": {
+          "type": "object"
+        }
+      }
+    },
+    "delegatePayment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "target"],
+      "properties": {
+        "type": { "const": "delegate" },
+        "target": { "$ref": "#/$defs/opid" }
+      }
+    },
+    "splitPayment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "execution", "recipients"],
+      "properties": {
+        "type": { "const": "split" },
+        "execution": { "$ref": "#/$defs/splitPaymentHandler" },
+        "recipients": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 100,
+          "uniqueItems": true,
+          "$comment": "recipient addresses MUST additionally be unique and share_ppm MUST sum exactly to 1000000.",
+          "items": { "$ref": "#/$defs/splitRecipient" }
+        }
+      }
+    },
+    "splitPaymentHandler": {
+      "type": "object",
+      "$comment": "A split-contract Payment Handler. The exact chain + asset pair MUST be active in the payer's authenticated, version-pinned asset registry before execution.",
+      "additionalProperties": false,
+      "required": ["type", "currency", "adapter", "chain", "asset", "contract", "config_id"],
+      "properties": {
+        "type": { "const": "erc20-contract" },
+        "currency": { "$ref": "#/$defs/currency" },
+        "adapter": {
+          "$ref": "#/$defs/namespaceId"
+        },
+        "chain": { "$ref": "#/$defs/chainId" },
+        "asset": { "$ref": "#/$defs/ethereumAddress" },
+        "contract": { "$ref": "#/$defs/ethereumAddress" },
+        "config_id": {
+          "type": "string",
+          "minLength": 66,
+          "maxLength": 66,
+          "pattern": "^0x[a-fA-F0-9]{64}$"
+        }
+      }
+    },
+    "splitRecipient": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["recipient", "share_ppm"],
+      "properties": {
+        "recipient": { "$ref": "#/$defs/ethereumAddress" },
+        "share_ppm": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 999999
+        },
+        "target": { "$ref": "#/$defs/opid" }
+      }
+    }
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "name": "@openpaymentaddress/protocol",
+  "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "packageManager": "npm@11.6.2",
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w @opap/core && npm run build -w @opap/runtime && npm run build -w @opap/cli",
+    "check": "npm run format:check && npm run lint && npm run schema:check && npm run typecheck && npm test && npm run build",
+    "format": "prettier --write \"{apps,packages,conformance,schema,scripts}/**/*.{ts,json,mjs}\" \"*.{json,js,mjs,ts}\" \".github/**/*.yml\"",
+    "format:check": "prettier --check \"{apps,packages,conformance,schema,scripts}/**/*.{ts,json,mjs}\" \"*.{json,js,mjs,ts}\" \".github/**/*.yml\"",
+    "lint": "eslint .",
+    "registry:check": "node scripts/check-browser-registry.mjs",
+    "schema:check": "node scripts/check-schema-copies.mjs && node scripts/generate-schema-validator.mjs --check",
+    "schema:generate": "node scripts/generate-schema-validator.mjs",
+    "test": "vitest run",
+    "test:contract": "npm test -w @opap/split-contract",
+    "test:devnet": "npm run test:devnet -w @opap/split-contract",
+    "test:browser": "npm run build -w @opap/demo && playwright test",
+    "test:lighthouse": "lhci autorun --config=lighthouserc.json",
+    "test:a11y": "npm run build -w @opap/demo && vitest run apps/opap-demo/test/component-accessibility.test.ts && playwright test --grep accessibility && npm run test:lighthouse",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@types/node": "latest",
+    "ajv": "^8.20.0",
+    "eslint": "^9.39.5",
+    "eslint-import-resolver-typescript": "latest",
+    "eslint-plugin-boundaries": "latest",
+    "prettier": "latest",
+    "tsup": "latest",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "latest",
+    "vitest": "latest"
+  }
+}

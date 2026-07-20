@@ -1,0 +1,30 @@
+{
+  "valid": [
+    {
+      "file": "valid/root-direct.json",
+      "expectedOpid": "https://merchant.example/"
+    },
+    {
+      "file": "valid/path-delegate.json",
+      "expectedOpid": "https://merchant.example/product/1223"
+    },
+    { "file": "valid/split.json", "expectedOpid": "https://split.example/" }
+  ],
+  "invalid": [
+    {
+      "file": "invalid/duplicate-key.json",
+      "expectedError": "invalid_record",
+      "diagnosticIncludes": "duplicate_key:id"
+    },
+    {
+      "file": "invalid/id-mismatch.json",
+      "expectedOpid": "https://other.example/",
+      "expectedError": "id_mismatch"
+    },
+    {
+      "file": "invalid/noncanonical-id.json",
+      "expectedError": "invalid_record",
+      "diagnosticIncludes": "noncanonical_id"
+    }
+  ]
+}

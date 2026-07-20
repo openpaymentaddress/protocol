@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "id": "https://merchant.example/",
+  "payment": {
+    "type": "direct",
+    "methods": [
+      {
+        "type": "sepa",
+        "currency": "EUR",
+        "name": "Merchant",
+        "iban": "NL91ABNA0417164300"
+      }
+    ]
+  }
+}
