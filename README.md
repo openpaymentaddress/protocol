@@ -22,6 +22,23 @@ OPAP does **not** promise that every layer is censorship-proof. Domain registrar
 
 OPAP works with infrastructure publishers already use: HTTPS, a well-known path, JSON, and optionally DNSSEC. Adoption can start with one payable page and one compatible resolver; it does not require joining a directory, migrating to a new payment rail, or replacing an existing website. The protocol is designed so that any application can implement it and any domain owner can publish it.
 
+### Where OPAP sits
+
+```mermaid
+flowchart TB
+    CREATOR["Creator"] --> OPID
+    BUSINESS["Business"] --> OPID
+    COMMUNITY["Community"] --> OPID
+
+    OPID["A payable URL<br/>https://yourdomain.org/donate<br/><br/>OPAP publishes and resolves its payment record"]
+
+    OPID --> BANK["Bank"]
+    OPID --> WALLET["Wallet"]
+    OPID --> OTHER["Other payment system"]
+```
+
+OPAP is the open layer between a domain-controlled public identity and the payment systems that settle value. It lets the publisher change compatible destinations without changing the URL they share.
+
 ## What OPAP does
 
 An **Open Payment Identifier (OPID)** is a canonical HTTPS URL, such as:
