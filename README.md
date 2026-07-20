@@ -53,6 +53,42 @@ OPAP rides on infrastructure that already exists: domains, HTTPS, and today's pa
 
 The rails change nothing; OPAP only tells payers where to find the recipient's current instructions. Like email and HTTPS, it is useful to the first publisher on day one and becomes a standard once tools learn to expect it.
 
+## A payment address for anything that can be paid
+
+An OPID can identify a person, organisation, account, or specific payable resource:
+
+- **People** receive wages, freelance income, reimbursements, sales proceeds, or platform payouts through an address they control.
+- **Businesses** publish one general payment address or distinct URLs for customers, invoices, orders, branches, and accounts.
+- **Commerce** makes existing product, checkout, and subscription URLs directly payable.
+- **Employers, marketplaces, and public institutions** pay people without making one bank or wallet identifier their permanent identity.
+- **Public services** publish stable addresses for taxes, permits, fines, fees, refunds, and other government payments.
+- **Software, services, and machines** expose payable URLs for metered usage, API access, autonomous purchases, or machine-to-machine payments.
+
+```text
+https://person.example/pay
+https://company.example/invoices/2026-001
+https://shop.example/orders/8041
+https://city.example/permits/renewal
+https://api.example/usage/7f32
+```
+
+The URL says **who or what is being paid**. The OPAP Record says **how the recipient currently accepts payment**. The payer application connects the two.
+
+## An open ecosystem around OPAP
+
+OPAP is a protocol layer, not a single product. Independent organisations can build interoperable components around it:
+
+- **OPID hosting:** publish and maintain OPAP Records, HTTPS endpoints, proofs, and key rotation for individuals and organisations. A host can offer instant addresses on its own domain or connect a customer's domain.
+- **Domain and hosting integration:** registrars, DNS providers, web hosts, and certificate platforms can make a domain payable and automate optional DNSSEC-bound keys.
+- **CMS and commerce plugins:** WordPress, ecommerce, invoicing, membership, and accounting tools can make existing pages, orders, accounts, and invoices payable.
+- **Resolver libraries and APIs:** reusable components can canonicalise OPIDs, discover records, validate trust, follow bounded delegation, and produce payment plans.
+- **Wallet and banking integrations:** payer applications can accept an OPID by link, paste, QR code, or contact and then execute a compatible payment route.
+- **Payroll, invoicing, and marketplace tools:** business software can store the recipient's durable OPID instead of treating changeable bank or wallet details as identity.
+- **Developer and conformance tooling:** record builders, validators, linters, test suites, and interoperability labs can make correct implementation routine.
+- **Availability and security services:** independent monitors can check records, certificates, DNSSEC proofs, key rotation, and unexpected destination changes.
+
+OPID hosting must not become a new central directory. Custom domains, data export, standards-compliant records, and the ability to move hosting providers preserve the recipient's control. Hosting an address does not require taking custody of funds or operating a payment rail.
+
 ## What OPAP does
 
 An **Open Payment Identifier (OPID)** is a canonical HTTPS URL, such as:
