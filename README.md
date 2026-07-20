@@ -22,6 +22,17 @@ OPAP does **not** promise that every layer is censorship-proof. Domain registrar
 
 OPAP works with infrastructure publishers already use: HTTPS, a well-known path, JSON, and optionally DNSSEC. Adoption can start with one payable page and one compatible resolver; it does not require joining a directory, migrating to a new payment rail, or replacing an existing website. The protocol is designed so that any application can implement it and any domain owner can publish it.
 
+### DNS for getting paid
+
+Developers already understand the basic idea:
+
+```text
+DNS:  www.example.com                 → where to find a website
+OPAP: https://example.com/donate      → how its owner chooses to get paid
+```
+
+Like DNS, OPAP makes a stable public name useful even when the system behind it changes. The shared URL stays the same while the publisher can update compatible payment instructions behind it. The analogy is functional, not literal: OPAP Records are served over HTTPS; DNSSEC can optionally bind an origin key for stronger verification.
+
 ### Where OPAP sits
 
 ```mermaid
