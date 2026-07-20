@@ -4,58 +4,61 @@
 
 **Status:** OPAP/1 implementation draft. The specification, schema and conformance fixtures in this repository are the canonical source for this revision. Production payment execution is outside the protocol and is not enabled by this repository.
 
-## Why OPAP
+## DNS for money
 
-Payment instructions are usually detached from the page, person, business, or community they represent. They live in a payment provider's link, a platform's account, a QR code, or a message that can be changed, removed, or made unavailable by an intermediary.
+**The internet has URLs. Now money does too.**
 
-OPAP lets the owner of a public HTTPS URL publish verifiable payment instructions for that exact URL. A creator can make `/support` payable, a business can make an invoice URL payable, and a collective can make one public page resolve to a transparent split. Payers see the destination and verification evidence before they choose whether and how to pay.
-
-### A freedom protocol
-
-OPAP is designed to remove the central payment-address directory as a control point. A publisher does not need permission from a single platform, wallet, processor, or payment network to make a URL discoverable: they publish a small, open record on a domain they control. Independent applications can resolve that record, and the recipient remains free to choose compatible payment methods.
-
-This makes OPAP useful to people and organisations concerned about deplatforming or debanking. It keeps the public payment identity with the publisher's domain instead of tying it to a provider account or a central alias registry.
-
-OPAP does **not** promise that every layer is censorship-proof. Domain registrars, DNS operators, hosting providers, certificate authorities, wallets, banks, and payment rails may still impose their own rules or restrictions. OPAP reduces one important choke point—the centralised payment-address layer—while leaving payment execution and regulatory obligations to the applications and rails that perform them.
-
-### Adoption without a gatekeeper
-
-OPAP works with infrastructure publishers already use: HTTPS, a well-known path, JSON, and optionally DNSSEC. Adoption can start with one payable page and one compatible resolver; it does not require joining a directory, migrating to a new payment rail, or replacing an existing website. The protocol is designed so that any application can implement it and any domain owner can publish it.
-
-### DNS for getting paid
-
-Developers already understand the basic idea:
+OPAP turns a canonical public HTTPS URL—including a page on your own domain—into a universal payment address. Anyone can use it to pay. The recipient alone decides where the money arrives.
 
 ```text
-DNS:  www.example.com                 → where to find a website
-OPAP: https://example.com/donate      → how its owner chooses to get paid
+DNS:  recipient.example             → where to find it
+OPAP: https://recipient.example/pay → how to pay it
 ```
 
-Like DNS, OPAP makes a stable public name useful even when the system behind it changes. The shared URL stays the same while the publisher can update compatible payment instructions behind it. The analogy is functional, not literal: OPAP Records are served over HTTPS; DNSSEC can optionally bind an origin key for stronger verification.
-
-### Where OPAP sits
+What DNS did for finding websites, OPAP does for getting paid: it connects a stable public name to a destination that can change without changing the name.
 
 ```mermaid
 flowchart TB
-    CREATOR["Creator"] --> OPID
-    BUSINESS["Business"] --> OPID
-    COMMUNITY["Community"] --> OPID
+    CUSTOMER["Customer"] -->|pays| ADDRESS
+    EMPLOYER["Employer"] -->|pays| ADDRESS
+    GOVERNMENT["Government"] -->|pays| ADDRESS
 
-    OPID["A payable URL<br/>https://yourdomain.org/donate<br/><br/>OPAP publishes and resolves its payment record"]
+    ADDRESS["OPAP payment-address layer<br/>https://recipient.example/pay<br/><br/>The recipient controls the destination"]
 
-    OPID --> BANK["Bank"]
-    OPID --> WALLET["Wallet"]
-    OPID --> OTHER["Other payment system"]
+    ADDRESS -->|resolves to| BANK["Bank account"]
+    ADDRESS -->|resolves to| WALLET["Wallet"]
+    ADDRESS -->|resolves to| OTHER["Other payment system"]
 ```
 
-OPAP is the open layer between a domain-controlled public identity and the payment systems that settle value. It lets the publisher change compatible destinations without changing the URL they share.
+The arrows show discovery and routing, not custody. OPAP does not hold or move money. Banks, wallets, chains, and future payment systems continue to settle payments exactly as they do today.
+
+## A freedom protocol
+
+A payment address should belong to its recipient—not to the bank, wallet, marketplace, or platform currently serving them. OPAP separates the stable public identity people pay from the replaceable destination where the money arrives. Keep the URL; change the provider, account, wallet, rail, or routing policy behind it.
+
+There is no central OPAP operator that can suspend an address or demand permission before one is published. Anyone who controls an HTTPS URL can publish payment instructions, and any compatible payer can resolve them. That removes the central directory, platform account, or proprietary payment identifier as a censorship and debanking chokepoint.
+
+A bank may close an account and a wallet provider may block its service, but neither owns the recipient's OPAP address. As long as the recipient retains control of the domain, they can publish another compatible destination without changing the address known to customers, employers, governments, or other payers.
+
+This is freedom at the address layer, not a claim that every underlying rail is permissionless. Registrars, DNS operators, hosting providers, certificate authorities, wallets, banks, and payment rails can still control their own layers. Publishers can reduce those dependencies by owning their domains, using portable hosting, publishing multiple routes, and including rails with different trust models.
+
+## Adoption without permission
+
+OPAP rides on infrastructure that already exists: domains, HTTPS, and today's payment rails. Nothing has to be replaced, and nobody has to move first. One published record and one payer application are already a working system.
+
+- Recipients put one stable payment address on invoices, checkouts, payroll records, subscriptions, profiles, and contracts.
+- Wallets and banking apps resolve that address and offer the compatible routes.
+- Invoicing and commerce software exchange a durable URL instead of provider-bound account details.
+- Registrars and hosting platforms make payable domains a standard feature.
+
+The rails change nothing; OPAP only tells payers where to find the recipient's current instructions. Like email and HTTPS, it is useful to the first publisher on day one and becomes a standard once tools learn to expect it.
 
 ## What OPAP does
 
 An **Open Payment Identifier (OPID)** is a canonical HTTPS URL, such as:
 
 ```text
-https://example.com/donate
+https://recipient.example/pay
 https://merchant.example/invoice/2026-001
 ```
 
@@ -112,8 +115,8 @@ Build and use the reference CLI:
 npm run build
 node apps/opap-cli/dist/index.js record validate path/to/record.json
 node apps/opap-cli/dist/index.js record hash path/to/record.json
-node apps/opap-cli/dist/index.js publish check https://example.com/donate
-node apps/opap-cli/dist/index.js resolve https://example.com/donate
+node apps/opap-cli/dist/index.js publish check https://recipient.example/pay
+node apps/opap-cli/dist/index.js resolve https://recipient.example/pay
 ```
 
 The live commands access the public network. Read the [operations guide](docs/implementation/milestone-2-operations.md) before publishing records or DNSSEC keys.
