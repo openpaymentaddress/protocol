@@ -1,3 +1,6 @@
+<img width="1730" height="909" alt="image" src="https://github.com/user-attachments/assets/86bfc40b-abe6-4da8-ae43-258767bef23e" />
+
+
 # Open Payment Address Protocol (OPAP)
 
 > A vendor-neutral protocol for publishing and resolving payment instructions from canonical HTTPS URLs.
