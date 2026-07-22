@@ -114,9 +114,9 @@ Record URL:     https://merchant.example/.well-known/open-payment/record/L2ludm9
 A resolver constructs this record URL itself and fetches that record only; it
 never fetches the submitted page or follows a publisher-supplied record
 location. Payer applications present the canonical HTTPS OPID and can expose
-the derived record URL as verification evidence. The record describes a direct
-destination, a bounded delegation, or an atomic split, which the resolver
-validates into an explicit execution plan.
+the derived record URL as verification evidence. The record describes ordered
+payment options or a bounded delegation. Direct rails and atomic splits are
+selectable options that the resolver validates into an explicit execution plan.
 
 ```text
 canonical HTTPS OPID

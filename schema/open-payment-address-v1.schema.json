@@ -3,7 +3,7 @@
   "$id": "https://openpaymentaddress.org/schema/opap-v1.json",
   "title": "Open Payment Address Protocol v1",
   "description": "Normative structural schema for an OPAP/1 Record.",
-  "$comment": "An OPAP Record is the machine-readable JSON document behind one canonical HTTPS OPID. Implementations MUST also enforce URL canonicalisation, same-origin deterministic record discovery, transport and CORS requirements, duplicate-key rejection, exact id equality, origin-key proof verification, IBAN checksum, trusted asset-registry validation, asset-currency matching, share sum, unique recipients and contract-state validation. The asset registry is client policy and is intentionally not embedded in an OPAP Record.",
+  "$comment": "An OPAP Record is the machine-readable JSON document behind one canonical HTTPS OPID. Implementations MUST also enforce URL canonicalisation, same-origin deterministic record discovery, transport and CORS requirements, duplicate-key rejection, exact id equality, origin-key proof verification, IBAN checksum, trusted asset-registry validation, asset-currency matching, duplicate payment-option targets, split-allocation share sum, unique split recipients and contract-state validation. The asset registry is client policy and is intentionally not embedded in an OPAP Record.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -45,9 +45,8 @@
     },
     "payment": {
       "oneOf": [
-        { "$ref": "#/$defs/directPayment" },
-        { "$ref": "#/$defs/delegatePayment" },
-        { "$ref": "#/$defs/splitPayment" }
+        { "$ref": "#/$defs/optionsPayment" },
+        { "$ref": "#/$defs/delegatePayment" }
       ]
     },
     "extensions": {
@@ -101,30 +100,31 @@
       "maxLength": 3,
       "pattern": "^[A-Z]{3}$"
     },
-    "directPayment": {
+    "optionsPayment": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["type", "methods"],
+      "required": ["type", "options"],
       "properties": {
-        "type": { "const": "direct" },
-        "methods": {
+        "type": { "const": "options" },
+        "options": {
           "type": "array",
           "minItems": 1,
           "maxItems": 16,
-          "$comment": "Methods are ordered from the receiver's strongest to weakest settlement preference.",
+          "$comment": "Payment Options are ordered from the receiver's strongest to weakest settlement preference. Implementations MUST reject duplicate recipient-affecting option targets.",
           "items": {
             "oneOf": [
-              { "$ref": "#/$defs/sepaPaymentHandler" },
-              { "$ref": "#/$defs/erc20PaymentHandler" },
-              { "$ref": "#/$defs/extensionPaymentHandler" }
+              { "$ref": "#/$defs/sepaPaymentOption" },
+              { "$ref": "#/$defs/erc20PaymentOption" },
+              { "$ref": "#/$defs/splitPaymentOption" },
+              { "$ref": "#/$defs/extensionPaymentOption" }
             ]
           }
         }
       }
     },
-    "sepaPaymentHandler": {
+    "sepaPaymentOption": {
       "type": "object",
-      "$comment": "A SEPA Payment Handler.",
+      "$comment": "A SEPA Payment Option.",
       "additionalProperties": false,
       "required": ["type", "currency", "name", "iban"],
       "properties": {
@@ -139,9 +139,9 @@
         "iban": { "$ref": "#/$defs/iban" }
       }
     },
-    "erc20PaymentHandler": {
+    "erc20PaymentOption": {
       "type": "object",
-      "$comment": "An ERC-20 Payment Handler. Asset identity is the exact chain + asset pair. symbol is an untrusted display hint. Execution requires an active entry in the payer's authenticated, version-pinned asset registry.",
+      "$comment": "An ERC-20 Payment Option. Asset identity is the exact chain + asset pair. symbol is an untrusted display hint. Execution requires an active entry in the payer's authenticated, version-pinned asset registry.",
       "additionalProperties": false,
       "required": ["type", "currency", "chain", "asset", "recipient"],
       "properties": {
@@ -158,9 +158,9 @@
         }
       }
     },
-    "extensionPaymentHandler": {
+    "extensionPaymentOption": {
       "type": "object",
-      "$comment": "A namespaced extension Payment Handler.",
+      "$comment": "A namespaced extension Payment Option.",
       "additionalProperties": false,
       "required": ["type", "currency", "data"],
       "properties": {
@@ -182,31 +182,31 @@
         "target": { "$ref": "#/$defs/opid" }
       }
     },
-    "splitPayment": {
+    "splitPaymentOption": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["type", "execution", "recipients"],
+      "required": ["type", "currency", "execution", "allocations"],
       "properties": {
         "type": { "const": "split" },
-        "execution": { "$ref": "#/$defs/splitPaymentHandler" },
-        "recipients": {
+        "currency": { "$ref": "#/$defs/currency" },
+        "execution": { "$ref": "#/$defs/splitExecution" },
+        "allocations": {
           "type": "array",
           "minItems": 2,
-          "maxItems": 100,
+          "maxItems": 16,
           "uniqueItems": true,
-          "$comment": "recipient addresses MUST additionally be unique and share_ppm MUST sum exactly to 1000000.",
-          "items": { "$ref": "#/$defs/splitRecipient" }
+          "$comment": "Allocation order is execution-significant. recipient addresses MUST additionally be unique case-insensitively and share_ppm MUST sum exactly to 1000000.",
+          "items": { "$ref": "#/$defs/splitAllocation" }
         }
       }
     },
-    "splitPaymentHandler": {
+    "splitExecution": {
       "type": "object",
-      "$comment": "A split-contract Payment Handler. The exact chain + asset pair MUST be active in the payer's authenticated, version-pinned asset registry before execution.",
+      "$comment": "Split-contract execution data. The exact chain + asset pair MUST be active in the payer's authenticated, version-pinned asset registry before execution.",
       "additionalProperties": false,
-      "required": ["type", "currency", "adapter", "chain", "asset", "contract", "config_id"],
+      "required": ["type", "adapter", "chain", "asset", "contract", "config_id"],
       "properties": {
         "type": { "const": "erc20-contract" },
-        "currency": { "$ref": "#/$defs/currency" },
         "adapter": {
           "$ref": "#/$defs/namespaceId"
         },
@@ -221,7 +221,7 @@
         }
       }
     },
-    "splitRecipient": {
+    "splitAllocation": {
       "type": "object",
       "additionalProperties": false,
       "required": ["recipient", "share_ppm"],
@@ -231,8 +231,7 @@
           "type": "integer",
           "minimum": 1,
           "maximum": 999999
-        },
-        "target": { "$ref": "#/$defs/opid" }
+        }
       }
     }
   }

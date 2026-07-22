@@ -2,7 +2,7 @@
 
 **A URL-native, non-custodial address layer for payments**
 
-Protocol version 1 · 20 July 2026
+Protocol version 1 · 22 July 2026
 
 **Status:** Draft specification.
 
@@ -26,11 +26,14 @@ The URL is the stable payment identity. A product page may retain its ordinary
 HTML behaviour for browsers, but an OPAP Resolver never retrieves that page. It
 retrieves only the deterministic well-known OPAP Record for the URL.
 
-OPAP publishes one of three payment objects:
+OPAP publishes one of two payment objects:
 
-- a direct recipient with ordered alternative Payment Handlers;
-- a delegation to another HTTPS OPID; or
-- an atomic split across fixed destinations.
+- ordered alternative Payment Options for the payer to select; or
+- a delegation to another HTTPS OPID.
+
+A Payment Option may be a direct rail such as SEPA or ERC-20, an atomic split
+across fixed destinations, or a namespaced extension. A split is therefore one
+selectable way to satisfy a payment, not a separate top-level routing mode.
 
 Amount, tax, product description, inventory, delivery, expiry, invoice status,
 and settlement status are application-level data. They are not inferred from a
@@ -196,27 +199,41 @@ interval for high-value, recurring, or unattended payments. Longer intervals
 extend replay exposure for a first-time resolver and for a returning resolver
 that has not observed a later revision.
 
-### 6.2 Direct payment
+### 6.2 Payment options
 
-A direct object contains one or more ordered alternative Payment Handlers for
-the same economic recipient. Each executable handler names a settlement
-currency; an asset is identified by its network and asset identifier, never by
-symbol alone. The first supported handler is the recipient preference.
+An `options` object contains one or more ordered alternative Payment Options
+for the same economic obligation. Each option names one settlement currency;
+an asset is identified by its network and asset identifier, never by symbol
+alone. The first supported option is the recipient preference, but the payer
+MAY select any supported option. Options MAY use different currencies.
+
+The structurally defined OPAP/1 option types are `sepa`, `erc20`, `split`, and
+a namespaced extension type. A resolver MUST retain every valid option when it
+computes target continuity. A payer MUST fail closed for any option it cannot
+execute, without making other supported options unusable. An `options` array
+MUST NOT contain the same recipient-affecting option target more than once.
 
 ### 6.3 Delegation
 
 A delegation contains only a canonical HTTPS `target` OPID. It has no local
-methods. A resolver MAY follow at most eight delegation hops and MUST reject a
+options. A resolver MAY follow at most eight delegation hops and MUST reject a
 loop, a duplicate OPID, or a changed record during payment revalidation.
 
 Product records commonly delegate to a merchant root identity. That avoids
 duplicating payment destinations as product pages change.
 
-### 6.4 Atomic split
+### 6.4 Atomic split option
 
-A split is one fixed, atomic payment instruction. It MUST have one settlement
-network and one asset, fixed recipients, positive integer shares, deterministic
-rounding, and verified contract state. Nested splits are forbidden.
+A split option is one fixed, atomic payment instruction among the published
+alternatives. It MUST have one settlement currency, one network and one asset,
+fixed allocations, positive integer `share_ppm` values that sum exactly to
+1,000,000, deterministic rounding, and verified contract state. It MUST contain
+between two and sixteen allocations. Recipient addresses MUST be unique under
+case-insensitive comparison.
+
+Allocation order is execution-significant: integer division is applied to all
+but the final allocation and the final allocation receives the remainder. An
+implementation MUST NOT reorder allocations. Nested splits are forbidden.
 
 ## 7. Binding, continuity, and origin-key epochs
 
@@ -383,11 +400,11 @@ The target projection contains recipient-affecting values only and is encoded
 as canonical JSON with object keys lexicographically sorted, no insignificant
 whitespace, and arrays handled as follows:
 
-- direct: the order-independent set of every method's recipient-affecting
+- options: the order-independent set of every option's recipient-affecting
   fields (SEPA currency and IBAN; ERC-20 currency, chain, asset, and recipient;
-  an extension handler's type, currency, and complete `data` object);
-- split: execution currency, adapter, chain, asset, contract, and config ID,
-  plus the order-independent set of `(recipient, share_ppm)` pairs;
+  split currency, adapter, chain, asset, contract, config ID, and the ordered
+  allocation sequence; an extension option's type, currency, and complete
+  `data` object);
 - a delegated source OPID: the resolved terminal OPID and that terminal
   projection.
 
@@ -412,11 +429,11 @@ For an OPID supplied by a payer or explicitly selected by the payer:
 4. Validate transport, JSON, schema, and exact `id` equality.
 5. Enforce `issued_at`, `expires_at`, and per-OPID revision history.
 6. Query the optional origin trust record; enforce its exact-host pin and proof.
-7. Resolve direct, delegate, or split semantics within the applicable bounds.
+7. Resolve options or delegate semantics within the applicable bounds.
 8. Compare and atomically persist key, revision, binding, and target history.
 9. Produce an immutable execution plan containing hostname, key fingerprint and
    epoch where applicable, binding, continuity, record revision and expiry,
-   exact-byte record fingerprint, and final handlers.
+   exact-byte record fingerprint, and final options.
 10. Immediately before execution, repeat the resolution and stop with
    `execution_changed` when recipient-affecting values or trust evidence differ
    from the plan the payer reviewed.

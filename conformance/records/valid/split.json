@@ -5,24 +5,29 @@
   "issued_at": "2026-07-22T12:00:00Z",
   "expires_at": "2026-08-21T12:00:00Z",
   "payment": {
-    "type": "split",
-    "execution": {
-      "type": "erc20-contract",
-      "currency": "EUR",
-      "adapter": "org.openpayments/split-v1",
-      "chain": "eip155:100",
-      "asset": "0x1111111111111111111111111111111111111111",
-      "contract": "0x2222222222222222222222222222222222222222",
-      "config_id": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-    },
-    "recipients": [
+    "type": "options",
+    "options": [
       {
-        "recipient": "0x3333333333333333333333333333333333333333",
-        "share_ppm": 600000
-      },
-      {
-        "recipient": "0x4444444444444444444444444444444444444444",
-        "share_ppm": 400000
+        "type": "split",
+        "currency": "EUR",
+        "execution": {
+          "type": "erc20-contract",
+          "adapter": "org.openpayments/split-v1",
+          "chain": "eip155:100",
+          "asset": "0x1111111111111111111111111111111111111111",
+          "contract": "0x2222222222222222222222222222222222222222",
+          "config_id": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "allocations": [
+          {
+            "recipient": "0x3333333333333333333333333333333333333333",
+            "share_ppm": 600000
+          },
+          {
+            "recipient": "0x4444444444444444444444444444444444444444",
+            "share_ppm": 400000
+          }
+        ]
       }
     ]
   }

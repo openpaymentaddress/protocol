@@ -1,7 +1,7 @@
 {
   "valid": [
     {
-      "file": "valid/root-direct.json",
+      "file": "valid/root-options.json",
       "expectedOpid": "https://merchant.example/"
     },
     {
@@ -40,6 +40,31 @@
       "file": "invalid/expiry-not-after-issuance.json",
       "expectedError": "invalid_record",
       "diagnosticIncludes": "expires_at"
+    },
+    {
+      "file": "invalid/legacy-direct.json",
+      "expectedError": "invalid_record",
+      "diagnosticIncludes": "payment"
+    },
+    {
+      "file": "invalid/legacy-split.json",
+      "expectedError": "invalid_record",
+      "diagnosticIncludes": "payment"
+    },
+    {
+      "file": "invalid/split-share-sum.json",
+      "expectedError": "invalid_record",
+      "diagnosticIncludes": "share_ppm"
+    },
+    {
+      "file": "invalid/split-duplicate-recipient.json",
+      "expectedError": "invalid_record",
+      "diagnosticIncludes": "duplicate_recipient"
+    },
+    {
+      "file": "invalid/duplicate-option-target.json",
+      "expectedError": "invalid_record",
+      "diagnosticIncludes": "duplicate_option_target"
     }
   ]
 }

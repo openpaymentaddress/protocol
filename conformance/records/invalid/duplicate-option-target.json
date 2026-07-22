@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "id": "https://merchant.example/duplicate-option",
+  "revision": 1,
+  "issued_at": "2026-07-22T12:00:00Z",
+  "expires_at": "2026-08-21T12:00:00Z",
+  "payment": {
+    "type": "options",
+    "options": [
+      {
+        "type": "sepa",
+        "currency": "EUR",
+        "name": "Merchant",
+        "iban": "NL91ABNA0417164300"
+      },
+      {
+        "type": "sepa",
+        "currency": "EUR",
+        "name": "Different display name",
+        "iban": "NL91ABNA0417164300"
+      }
+    ]
+  }
+}
