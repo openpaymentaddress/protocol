@@ -101,7 +101,20 @@ https://recipient.example/pay
 https://merchant.example/invoice/2026-001
 ```
 
-OPAP deterministically derives a same-origin record URL from that identifier. A resolver fetches that record only; it never fetches the submitted page. The record describes a direct destination, a bounded delegation, or an atomic split, which the resolver validates into an explicit execution plan.
+OPAP deterministically derives a same-origin record URL from that identifier:
+
+```text
+Canonical OPID: https://merchant.example/invoice/2026-001
+Path key:       L2ludm9pY2UvMjAyNi0wMDE
+Record URL:     https://merchant.example/.well-known/open-payment/record/L2ludm9pY2UvMjAyNi0wMDE
+```
+
+A resolver constructs this record URL itself and fetches that record only; it
+never fetches the submitted page or follows a publisher-supplied record
+location. Payer applications present the canonical HTTPS OPID and can expose
+the derived record URL as verification evidence. The record describes a direct
+destination, a bounded delegation, or an atomic split, which the resolver
+validates into an explicit execution plan.
 
 ```text
 canonical HTTPS OPID
