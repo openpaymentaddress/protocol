@@ -25,6 +25,21 @@
       "file": "invalid/noncanonical-id.json",
       "expectedError": "invalid_record",
       "diagnosticIncludes": "noncanonical_id"
+    },
+    {
+      "file": "invalid/revision-zero.json",
+      "expectedError": "invalid_record",
+      "diagnosticIncludes": "revision"
+    },
+    {
+      "file": "invalid/timestamp-fractional.json",
+      "expectedError": "invalid_record",
+      "diagnosticIncludes": "issued_at"
+    },
+    {
+      "file": "invalid/expiry-not-after-issuance.json",
+      "expectedError": "invalid_record",
+      "diagnosticIncludes": "expires_at"
     }
   ]
 }
