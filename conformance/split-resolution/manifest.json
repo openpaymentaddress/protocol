@@ -1,0 +1,79 @@
+{
+  "description": "Portable OPAP/1 scenarios for compiling the OPID allocation in ../records/valid/split-opid-target.json. Target files are alternate responses for the same target OPID unless a scenario lists more than one record.",
+  "rootRecord": "../records/valid/split-opid-target.json",
+  "settlementContext": {
+    "currency": "EUR",
+    "type": "erc20-contract",
+    "adapter": "org.openpayments/split-v1",
+    "chain": "eip155:100",
+    "asset": "0x1111111111111111111111111111111111111111"
+  },
+  "scenarios": [
+    {
+      "id": "compatible-opid-target",
+      "records": ["targets/alice-compatible.json"],
+      "expectedResolvedOpids": [
+        "https://split.example/opid-target",
+        "https://alice.example/"
+      ],
+      "expectedSelectedOptionIndex": 1,
+      "expectedPlan": "../execution-plans/compatible-opid-target.json",
+      "expectedPlanFingerprint": "sha256:d825b96ee8c6f776195820786ffed5a15013f794f8f6c6257d67ab1b41b393a5",
+      "expectedAllocations": [
+        { "recipient": "0x3333333333333333333333333333333333333333", "share_ppm": 600000 },
+        { "recipient": "0x4444444444444444444444444444444444444444", "share_ppm": 400000 }
+      ]
+    },
+    {
+      "id": "incompatible-target-options",
+      "records": ["targets/alice-incompatible.json"],
+      "expectedError": "split_target_incompatible"
+    },
+    {
+      "id": "unavailable-target",
+      "records": [],
+      "fetchResult": { "opid": "https://alice.example/", "status": 404 },
+      "expectedError": "record_not_found"
+    },
+    {
+      "id": "nested-split-unsupported",
+      "records": ["targets/alice-nested-split.json"],
+      "expectedError": "nested_split_unsupported"
+    },
+    {
+      "id": "post-compilation-recipient-collision",
+      "records": ["targets/alice-colliding-recipient.json"],
+      "expectedError": "split_recipient_collision"
+    },
+    {
+      "id": "compatible-target-with-unselected-split",
+      "records": ["targets/alice-compatible-with-split.json"],
+      "expectedSelectedOptionIndex": 0,
+      "expectedTargetFingerprint": "sha256:e142106707c4102e8da2ce8bcba452d743a944458711d0bae6280e6c3c3f6a3e"
+    },
+    {
+      "id": "delegation-cycle",
+      "records": [
+        "targets/alice-delegates-team.json",
+        "targets/team-delegates-alice.json"
+      ],
+      "expectedError": "resolution_cycle"
+    },
+    {
+      "id": "target-changed-before-execution",
+      "reviewRecords": ["targets/alice-compatible.json"],
+      "executionRecords": ["targets/alice-compatible-changed.json"],
+      "expectedError": "execution_changed"
+    },
+    {
+      "id": "freshness-only-target-refresh",
+      "reviewRecords": ["targets/alice-compatible.json"],
+      "executionRecords": ["targets/alice-compatible-refreshed.json"],
+      "expected": {
+        "accepted": true,
+        "recordFingerprintChanged": true,
+        "targetChanged": false
+      }
+    }
+  ]
+}

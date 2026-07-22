@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "id": "https://alice.example/",
+  "revision": 4,
+  "issued_at": "2026-07-22T12:00:00Z",
+  "expires_at": "2026-08-21T12:00:00Z",
+  "payment": {
+    "type": "options",
+    "options": [
+      {
+        "type": "sepa",
+        "currency": "EUR",
+        "name": "Alice Example",
+        "iban": "NL91ABNA0417164300"
+      },
+      {
+        "type": "erc20",
+        "currency": "EUR",
+        "chain": "eip155:1",
+        "asset": "0x1111111111111111111111111111111111111111",
+        "recipient": "0x4444444444444444444444444444444444444444"
+      }
+    ]
+  }
+}

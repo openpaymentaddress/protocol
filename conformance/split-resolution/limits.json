@@ -1,0 +1,31 @@
+{
+  "description": "Boundary vectors for every normative OPAP/1 payment-graph resource limit.",
+  "limits": {
+    "max_path_edges": 8,
+    "distinct_opids": 128,
+    "allocation_targets_per_split": 16,
+    "simultaneous_fetches": 8,
+    "fetched_body_bytes": 8388608,
+    "elapsed_ms": 30000,
+    "terminal_leaves": 256,
+    "terminal_leaves_per_split": 16
+  },
+  "cases": [
+    { "id": "path-depth-at-limit", "metric": "max_path_edges", "value": 8, "expectedAccepted": true },
+    { "id": "path-depth-over-limit", "metric": "max_path_edges", "value": 9, "expectedError": "resolution_limit_exceeded" },
+    { "id": "opid-count-at-limit", "metric": "distinct_opids", "value": 128, "expectedAccepted": true },
+    { "id": "opid-count-over-limit", "metric": "distinct_opids", "value": 129, "expectedError": "resolution_limit_exceeded" },
+    { "id": "fan-out-at-limit", "metric": "allocation_targets_per_split", "value": 16, "expectedAccepted": true },
+    { "id": "fan-out-over-limit", "metric": "allocation_targets_per_split", "value": 17, "expectedError": "resolution_limit_exceeded" },
+    { "id": "concurrency-at-limit", "metric": "simultaneous_fetches", "value": 8, "expectedAccepted": true },
+    { "id": "concurrency-over-limit", "metric": "simultaneous_fetches", "value": 9, "expectedError": "resolution_limit_exceeded" },
+    { "id": "bytes-at-limit", "metric": "fetched_body_bytes", "value": 8388608, "expectedAccepted": true },
+    { "id": "bytes-over-limit", "metric": "fetched_body_bytes", "value": 8388609, "expectedError": "resolution_limit_exceeded" },
+    { "id": "time-at-limit", "metric": "elapsed_ms", "value": 30000, "expectedAccepted": true },
+    { "id": "time-over-limit", "metric": "elapsed_ms", "value": 30001, "expectedError": "resolution_limit_exceeded" },
+    { "id": "leaf-count-at-limit", "metric": "terminal_leaves", "value": 256, "expectedAccepted": true },
+    { "id": "leaf-count-over-limit", "metric": "terminal_leaves", "value": 257, "expectedError": "resolution_limit_exceeded" },
+    { "id": "split-leaves-at-limit", "metric": "terminal_leaves_per_split", "value": 16, "expectedAccepted": true },
+    { "id": "split-leaves-over-limit", "metric": "terminal_leaves_per_split", "value": 17, "expectedError": "resolution_limit_exceeded" }
+  ]
+}

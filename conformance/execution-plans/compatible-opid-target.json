@@ -1,0 +1,157 @@
+{
+  "version": 1,
+  "protocol": "OPAP/1",
+  "root_opid": "https://split.example/opid-target",
+  "graph": {
+    "nodes": [
+      {
+        "opid": "https://split.example/opid-target",
+        "hostname": "split.example",
+        "record_url": "https://split.example/.well-known/open-payment/record/L29waWQtdGFyZ2V0",
+        "revision": 1,
+        "expires_at": "2026-08-21T12:00:00Z",
+        "record_fingerprint": "sha256:2d3c53fca6bdaab76360bfb12ac92d7490f82aeb33260bab18da955cc662512f",
+        "binding": "https",
+        "continuity": "none",
+        "target_projection": {
+          "options": [
+            {
+              "type": "split",
+              "currency": "EUR",
+              "adapter": "org.openpayments/split-v1",
+              "chain": "eip155:100",
+              "asset": "0x1111111111111111111111111111111111111111",
+              "contract": "0x2222222222222222222222222222222222222222",
+              "config_id": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "allocations": [
+                {
+                  "recipient": "0x3333333333333333333333333333333333333333",
+                  "share_ppm": 600000
+                },
+                {
+                  "target": "https://alice.example/",
+                  "share_ppm": 400000,
+                  "terminal_opid": "https://alice.example/",
+                  "selected": {
+                    "type": "erc20",
+                    "currency": "EUR",
+                    "chain": "eip155:100",
+                    "asset": "0x1111111111111111111111111111111111111111",
+                    "recipient": "0x4444444444444444444444444444444444444444"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "target_fingerprint": "sha256:c70c1e33bf89ce29ccff6339c868a7af51a38f3240bb7274e20b8d45f41d1482",
+        "selection": {
+          "option_index": 0,
+          "option_projection": {
+            "type": "split",
+            "currency": "EUR",
+            "adapter": "org.openpayments/split-v1",
+            "chain": "eip155:100",
+            "asset": "0x1111111111111111111111111111111111111111",
+            "contract": "0x2222222222222222222222222222222222222222",
+            "config_id": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "allocations": [
+              {
+                "recipient": "0x3333333333333333333333333333333333333333",
+                "share_ppm": 600000
+              },
+              {
+                "target": "https://alice.example/",
+                "share_ppm": 400000,
+                "terminal_opid": "https://alice.example/",
+                "selected": {
+                  "type": "erc20",
+                  "currency": "EUR",
+                  "chain": "eip155:100",
+                  "asset": "0x1111111111111111111111111111111111111111",
+                  "recipient": "0x4444444444444444444444444444444444444444"
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "opid": "https://alice.example/",
+        "hostname": "alice.example",
+        "record_url": "https://alice.example/.well-known/open-payment/record/Lw",
+        "revision": 4,
+        "expires_at": "2026-08-21T12:00:00Z",
+        "record_fingerprint": "sha256:76f357303df60380864f00a8e571ef8f697eda0d6f14ab2cfb4114df799d94b6",
+        "binding": "https",
+        "continuity": "none",
+        "target_projection": {
+          "options": [
+            {
+              "type": "erc20",
+              "currency": "EUR",
+              "chain": "eip155:1",
+              "asset": "0x1111111111111111111111111111111111111111",
+              "recipient": "0x9999999999999999999999999999999999999999"
+            },
+            {
+              "type": "erc20",
+              "currency": "EUR",
+              "chain": "eip155:100",
+              "asset": "0x1111111111111111111111111111111111111111",
+              "recipient": "0x4444444444444444444444444444444444444444"
+            },
+            {
+              "type": "erc20",
+              "currency": "EUR",
+              "chain": "eip155:100",
+              "asset": "0x1111111111111111111111111111111111111111",
+              "recipient": "0x5555555555555555555555555555555555555555"
+            }
+          ]
+        },
+        "target_fingerprint": "sha256:c9634a1712b8b2cad9142da2a5abaf81b6af10d8a1b78463b378a0620af66506",
+        "selection": {
+          "option_index": 1,
+          "option_projection": {
+            "type": "erc20",
+            "currency": "EUR",
+            "chain": "eip155:100",
+            "asset": "0x1111111111111111111111111111111111111111",
+            "recipient": "0x4444444444444444444444444444444444444444"
+          }
+        }
+      }
+    ],
+    "edges": [
+      {
+        "type": "allocation",
+        "from": "https://split.example/opid-target",
+        "option_index": 0,
+        "allocation_index": 1,
+        "to": "https://alice.example/"
+      }
+    ]
+  },
+  "execution": {
+    "type": "split",
+    "source_opid": "https://split.example/opid-target",
+    "source_option_index": 0,
+    "currency": "EUR",
+    "adapter": "org.openpayments/split-v1",
+    "chain": "eip155:100",
+    "asset": "0x1111111111111111111111111111111111111111",
+    "contract": "0x2222222222222222222222222222222222222222",
+    "config_id": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "allocations": [
+      {
+        "recipient": "0x3333333333333333333333333333333333333333",
+        "share_ppm": 600000
+      },
+      {
+        "recipient": "0x4444444444444444444444444444444444444444",
+        "share_ppm": 400000
+      }
+    ]
+  }
+}

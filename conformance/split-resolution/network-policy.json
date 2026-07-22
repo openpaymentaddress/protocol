@@ -1,0 +1,25 @@
+{
+  "description": "Resolver network-destination policy vectors. Every address in every resolution attempt must be globally routable unicast.",
+  "cases": [
+    { "id": "public-ipv4", "resolutionAttempts": [["93.184.216.34"]], "expectedAccepted": true },
+    { "id": "public-ipv6", "resolutionAttempts": [["2606:2800:220:1:248:1893:25c8:1946"]], "expectedAccepted": true },
+    { "id": "public-nat64", "resolutionAttempts": [["64:ff9b::5db8:d822"]], "expectedAccepted": true },
+    { "id": "loopback-ipv4", "resolutionAttempts": [["127.0.0.1"]], "expectedError": "target_address_forbidden" },
+    { "id": "private-ipv4", "resolutionAttempts": [["10.0.0.1"]], "expectedError": "target_address_forbidden" },
+    { "id": "link-local-ipv4", "resolutionAttempts": [["169.254.169.254"]], "expectedError": "target_address_forbidden" },
+    { "id": "shared-ipv4", "resolutionAttempts": [["100.64.0.1"]], "expectedError": "target_address_forbidden" },
+    { "id": "documentation-ipv4", "resolutionAttempts": [["192.0.2.1"]], "expectedError": "target_address_forbidden" },
+    { "id": "deprecated-relay-ipv4", "resolutionAttempts": [["192.88.99.1"]], "expectedError": "target_address_forbidden" },
+    { "id": "benchmark-ipv4", "resolutionAttempts": [["198.18.0.1"]], "expectedError": "target_address_forbidden" },
+    { "id": "loopback-ipv6", "resolutionAttempts": [["::1"]], "expectedError": "target_address_forbidden" },
+    { "id": "mapped-loopback-ipv6", "resolutionAttempts": [["::ffff:127.0.0.1"]], "expectedError": "target_address_forbidden" },
+    { "id": "nat64-private-ipv4", "resolutionAttempts": [["64:ff9b::a00:1"]], "expectedError": "target_address_forbidden" },
+    { "id": "unique-local-ipv6", "resolutionAttempts": [["fd00::1"]], "expectedError": "target_address_forbidden" },
+    { "id": "link-local-ipv6", "resolutionAttempts": [["fe80::1"]], "expectedError": "target_address_forbidden" },
+    { "id": "documentation-ipv6", "resolutionAttempts": [["2001:db8::1"]], "expectedError": "target_address_forbidden" },
+    { "id": "documentation-ipv6-new", "resolutionAttempts": [["3fff::1"]], "expectedError": "target_address_forbidden" },
+    { "id": "reserved-ipv6", "resolutionAttempts": [["4000::1"]], "expectedError": "target_address_forbidden" },
+    { "id": "mixed-public-private-answer", "resolutionAttempts": [["93.184.216.34", "10.0.0.1"]], "expectedError": "target_address_forbidden" },
+    { "id": "dns-rebinding-on-retry", "resolutionAttempts": [["93.184.216.34"], ["127.0.0.1"]], "expectedError": "target_address_forbidden" }
+  ]
+}

@@ -7,7 +7,8 @@ Thank you for helping improve an open payment-address protocol.
 1. Open an issue first for a normative or compatibility-affecting change.
 2. Keep the specification, schema, and conformance fixtures aligned.
 3. Do not add application, wallet, provider, asset, custody, or hosting policy to the protocol layer.
-4. Validate all changed JSON files and check that documentation links resolve.
+4. Run `npm ci --ignore-scripts` and `npm test`; check that documentation links
+   resolve.
 
 ## Normative changes
 

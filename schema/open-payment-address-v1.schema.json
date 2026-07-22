@@ -3,7 +3,7 @@
   "$id": "https://openpaymentaddress.org/schema/opap-v1.json",
   "title": "Open Payment Address Protocol v1",
   "description": "Normative structural schema for an OPAP/1 Record.",
-  "$comment": "An OPAP Record is the machine-readable JSON document behind one canonical HTTPS OPID. Implementations MUST also enforce URL canonicalisation, same-origin deterministic record discovery, transport and CORS requirements, duplicate-key rejection, exact id equality, origin-key proof verification, IBAN checksum, trusted asset-registry validation, asset-currency matching, duplicate payment-option targets, split-allocation share sum, unique split recipients and contract-state validation. The asset registry is client policy and is intentionally not embedded in an OPAP Record.",
+  "$comment": "An OPAP Record is the machine-readable JSON document behind one canonical HTTPS OPID. Implementations MUST also enforce URL canonicalisation, same-origin deterministic record discovery, transport and CORS requirements, duplicate-key rejection, exact id equality, origin-key proof verification, IBAN checksum, trusted asset-registry validation, asset-currency matching, duplicate payment-option targets, split-allocation share sum, unique split destinations, bounded OPID-target resolution and contract-state validation. The asset registry is client policy and is intentionally not embedded in an OPAP Record.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -195,7 +195,7 @@
           "minItems": 2,
           "maxItems": 16,
           "uniqueItems": true,
-          "$comment": "Allocation order is execution-significant. recipient addresses MUST additionally be unique case-insensitively and share_ppm MUST sum exactly to 1000000.",
+          "$comment": "Allocation order is execution-significant. Each item has exactly one of recipient or target. Implementations MUST additionally enforce unique terminal recipients case-insensitively, unique canonical target OPIDs, uniqueness again after target compilation, and a share_ppm sum of exactly 1000000.",
           "items": { "$ref": "#/$defs/splitAllocation" }
         }
       }
@@ -224,15 +224,20 @@
     "splitAllocation": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["recipient", "share_ppm"],
+      "required": ["share_ppm"],
       "properties": {
         "recipient": { "$ref": "#/$defs/ethereumAddress" },
+        "target": { "$ref": "#/$defs/opid" },
         "share_ppm": {
           "type": "integer",
           "minimum": 1,
           "maximum": 999999
         }
-      }
+      },
+      "oneOf": [
+        { "required": ["recipient"] },
+        { "required": ["target"] }
+      ]
     }
   }
 }

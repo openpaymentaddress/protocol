@@ -8,7 +8,11 @@
       "file": "valid/path-delegate.json",
       "expectedOpid": "https://merchant.example/product/1223"
     },
-    { "file": "valid/split.json", "expectedOpid": "https://split.example/" }
+    { "file": "valid/split.json", "expectedOpid": "https://split.example/" },
+    {
+      "file": "valid/split-opid-target.json",
+      "expectedOpid": "https://split.example/opid-target"
+    }
   ],
   "invalid": [
     {
@@ -60,6 +64,21 @@
       "file": "invalid/split-duplicate-recipient.json",
       "expectedError": "invalid_record",
       "diagnosticIncludes": "duplicate_recipient"
+    },
+    {
+      "file": "invalid/split-allocation-two-destinations.json",
+      "expectedError": "invalid_record",
+      "diagnosticIncludes": "allocation_destination"
+    },
+    {
+      "file": "invalid/split-noncanonical-target.json",
+      "expectedError": "invalid_record",
+      "diagnosticIncludes": "noncanonical_target"
+    },
+    {
+      "file": "invalid/split-duplicate-target.json",
+      "expectedError": "invalid_record",
+      "diagnosticIncludes": "duplicate_target"
     },
     {
       "file": "invalid/duplicate-option-target.json",

@@ -117,6 +117,9 @@ location. Payer applications present the canonical HTTPS OPID and can expose
 the derived record URL as verification evidence. The record describes ordered
 payment options or a bounded delegation. Direct rails and atomic splits are
 selectable options that the resolver validates into an explicit execution plan.
+A split allocation may name either a terminal address or another canonical
+OPID; the resolver resolves OPID targets under the split's settlement context
+and freezes every target's trust and record evidence into the reviewed plan.
 
 ```text
 canonical HTTPS OPID
@@ -132,13 +135,22 @@ immutable execution plan for a payer
 
 OPAP publishes payment instructions. It does not hold funds, sign transactions, custody keys, operate a wallet, settle a payment, mandate a blockchain or payment provider, or require cloud hosting.
 
+OPAP stops at the reviewed, immediately revalidated payment instruction. Each
+executable option represents one handoff to an external wallet, rail, or
+executor. Scheduling multiple payments, tracking partial completion, retrying,
+reconciling, refunding, reversing, converting, or deciding that an obligation
+has been fulfilled belongs to applications and settlement systems—not OPAP.
+
 ## Repository contents
 
 | Path | Purpose |
 | --- | --- |
 | [`specification/opap-1.md`](specification/opap-1.md) | Normative OPAP/1 specification |
 | [`schema/open-payment-address-v1.schema.json`](schema/open-payment-address-v1.schema.json) | Normative structural schema for an OPAP Record |
+| [`schema/open-payment-execution-plan-v1.schema.json`](schema/open-payment-execution-plan-v1.schema.json) | Normative immutable execution-plan schema |
 | [`conformance/records`](conformance/records) | Portable valid and invalid record fixtures |
+| [`conformance/execution-plans`](conformance/execution-plans) | Exact immutable execution-plan vectors and fingerprints |
+| [`conformance/split-resolution`](conformance/split-resolution) | OPID-targeted split compilation scenarios |
 | [`conformance/security`](conformance/security) | Recovery-commitment and signed key-transition vectors |
 | [`conformance/resolver-state`](conformance/resolver-state) | Trust, history, freshness, DNS, and revalidation scenarios |
 
@@ -149,6 +161,20 @@ This repository intentionally excludes applications, SDKs, wallets, provider ada
 - [OPAP/1 specification](specification/opap-1.md)
 - [OPAP Record JSON Schema](schema/open-payment-address-v1.schema.json)
 - [Conformance fixture manifest](conformance/records/manifest.json)
+
+## Validate conformance
+
+Node.js 22 or newer is required. Install the pinned development dependency and
+run the complete schema, semantic, plan, graph-limit, and network-policy suite:
+
+```text
+npm ci --ignore-scripts
+npm test
+```
+
+The same command runs as the `Protocol conformance` GitHub Actions check for
+every pull request and push to `main`. Repository administrators SHOULD make
+that check required before merging changes to a protected branch.
 
 ## Security model
 

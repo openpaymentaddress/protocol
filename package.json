@@ -1,0 +1,16 @@
+{
+  "name": "@openpaymentaddress/protocol-conformance",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "conformance": "node conformance/validate.mjs",
+    "test": "npm run conformance"
+  },
+  "devDependencies": {
+    "ajv": "8.20.0"
+  }
+}

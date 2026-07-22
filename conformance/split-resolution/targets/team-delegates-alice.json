@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "id": "https://team.example/",
+  "revision": 2,
+  "issued_at": "2026-07-22T12:00:00Z",
+  "expires_at": "2026-08-21T12:00:00Z",
+  "payment": {
+    "type": "delegate",
+    "target": "https://alice.example/"
+  }
+}

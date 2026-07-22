@@ -1,0 +1,273 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openpaymentaddress.org/schema/opap-execution-plan-v1.json",
+  "title": "Open Payment Address Protocol v1 Immutable Execution Plan",
+  "description": "Normative structural schema for one reviewed OPAP/1 Payment Option resolved to one external executor invocation.",
+  "$comment": "The plan contains recipient-affecting protocol data and resolution evidence only. Amount, order, invoice, tax, retry, settlement-status and other application workflow state are intentionally excluded.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "protocol", "root_opid", "graph", "execution"],
+  "properties": {
+    "version": { "const": 1 },
+    "protocol": { "const": "OPAP/1" },
+    "root_opid": { "$ref": "#/$defs/opid" },
+    "graph": { "$ref": "#/$defs/resolutionGraph" },
+    "execution": {
+      "oneOf": [
+        { "$ref": "#/$defs/sepaExecution" },
+        { "$ref": "#/$defs/erc20Execution" },
+        { "$ref": "#/$defs/splitExecution" },
+        { "$ref": "#/$defs/extensionExecution" }
+      ]
+    }
+  },
+  "$defs": {
+    "utcSecond": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]Z$"
+    },
+    "opid": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 512,
+      "pattern": "^https://[^/?#:]+/(?:[A-Za-z0-9._~/-]|%[0-9A-F]{2})*$"
+    },
+    "namespaceId": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 128,
+      "pattern": "^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?/[a-z0-9](?:[a-z0-9._-]{0,62}[a-z0-9])?$"
+    },
+    "hostname": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 253,
+      "pattern": "^[a-z0-9.-]+$"
+    },
+    "ethereumAddress": {
+      "type": "string",
+      "pattern": "^0x[a-f0-9]{40}$"
+    },
+    "configId": {
+      "type": "string",
+      "pattern": "^0x[a-f0-9]{64}$"
+    },
+    "chainId": {
+      "type": "string",
+      "maxLength": 40,
+      "pattern": "^eip155:[1-9][0-9]*$"
+    },
+    "currency": {
+      "type": "string",
+      "pattern": "^[A-Z]{3}$"
+    },
+    "fingerprint": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "originKey": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fingerprint", "epoch"],
+      "properties": {
+        "fingerprint": { "$ref": "#/$defs/fingerprint" },
+        "epoch": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        }
+      }
+    },
+    "selection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["option_index", "option_projection"],
+      "properties": {
+        "option_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 15
+        },
+        "option_projection": { "type": "object" }
+      }
+    },
+    "nodeEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "opid",
+        "hostname",
+        "record_url",
+        "revision",
+        "expires_at",
+        "record_fingerprint",
+        "binding",
+        "continuity",
+        "target_projection",
+        "target_fingerprint"
+      ],
+      "properties": {
+        "opid": { "$ref": "#/$defs/opid" },
+        "hostname": { "$ref": "#/$defs/hostname" },
+        "record_url": {
+          "type": "string",
+          "pattern": "^https://[^/?#:]+/\\.well-known/open-payment/record/[A-Za-z0-9_-]+$"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "expires_at": { "$ref": "#/$defs/utcSecond" },
+        "record_fingerprint": { "$ref": "#/$defs/fingerprint" },
+        "binding": { "enum": ["https", "dnssec"] },
+        "continuity": { "enum": ["none", "first-use", "bound"] },
+        "origin_key": { "$ref": "#/$defs/originKey" },
+        "target_projection": { "type": "object" },
+        "target_fingerprint": { "$ref": "#/$defs/fingerprint" },
+        "selection": { "$ref": "#/$defs/selection" }
+      }
+    },
+    "delegationEdge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "from", "to"],
+      "properties": {
+        "type": { "const": "delegate" },
+        "from": { "$ref": "#/$defs/opid" },
+        "to": { "$ref": "#/$defs/opid" }
+      }
+    },
+    "allocationEdge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "from", "option_index", "allocation_index", "to"],
+      "properties": {
+        "type": { "const": "allocation" },
+        "from": { "$ref": "#/$defs/opid" },
+        "option_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 15
+        },
+        "allocation_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 15
+        },
+        "to": { "$ref": "#/$defs/opid" }
+      }
+    },
+    "resolutionGraph": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["nodes", "edges"],
+      "properties": {
+        "nodes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 128,
+          "$comment": "Nodes are in deterministic depth-first traversal order and have unique canonical opid values.",
+          "items": { "$ref": "#/$defs/nodeEvidence" }
+        },
+        "edges": {
+          "type": "array",
+          "maxItems": 127,
+          "$comment": "Edges are in deterministic encounter order.",
+          "items": {
+            "oneOf": [
+              { "$ref": "#/$defs/delegationEdge" },
+              { "$ref": "#/$defs/allocationEdge" }
+            ]
+          }
+        }
+      }
+    },
+    "sepaExecution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "source_opid", "source_option_index", "currency", "name", "iban"],
+      "properties": {
+        "type": { "const": "sepa" },
+        "source_opid": { "$ref": "#/$defs/opid" },
+        "source_option_index": { "type": "integer", "minimum": 0, "maximum": 15 },
+        "currency": { "const": "EUR" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "iban": { "type": "string", "pattern": "^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$" }
+      }
+    },
+    "erc20Execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "source_opid", "source_option_index", "currency", "chain", "asset", "recipient"],
+      "properties": {
+        "type": { "const": "erc20" },
+        "source_opid": { "$ref": "#/$defs/opid" },
+        "source_option_index": { "type": "integer", "minimum": 0, "maximum": 15 },
+        "currency": { "$ref": "#/$defs/currency" },
+        "chain": { "$ref": "#/$defs/chainId" },
+        "asset": { "$ref": "#/$defs/ethereumAddress" },
+        "recipient": { "$ref": "#/$defs/ethereumAddress" }
+      }
+    },
+    "compiledAllocation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["recipient", "share_ppm"],
+      "properties": {
+        "recipient": { "$ref": "#/$defs/ethereumAddress" },
+        "share_ppm": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 999999
+        }
+      }
+    },
+    "splitExecution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "source_opid",
+        "source_option_index",
+        "currency",
+        "adapter",
+        "chain",
+        "asset",
+        "contract",
+        "config_id",
+        "allocations"
+      ],
+      "properties": {
+        "type": { "const": "split" },
+        "source_opid": { "$ref": "#/$defs/opid" },
+        "source_option_index": { "type": "integer", "minimum": 0, "maximum": 15 },
+        "currency": { "$ref": "#/$defs/currency" },
+        "adapter": { "$ref": "#/$defs/namespaceId" },
+        "chain": { "$ref": "#/$defs/chainId" },
+        "asset": { "$ref": "#/$defs/ethereumAddress" },
+        "contract": { "$ref": "#/$defs/ethereumAddress" },
+        "config_id": { "$ref": "#/$defs/configId" },
+        "allocations": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 16,
+          "items": { "$ref": "#/$defs/compiledAllocation" }
+        }
+      }
+    },
+    "extensionExecution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "source_opid", "source_option_index", "option_type", "currency", "data"],
+      "properties": {
+        "type": { "const": "extension" },
+        "source_opid": { "$ref": "#/$defs/opid" },
+        "source_option_index": { "type": "integer", "minimum": 0, "maximum": 15 },
+        "option_type": { "$ref": "#/$defs/namespaceId" },
+        "currency": { "$ref": "#/$defs/currency" },
+        "data": { "type": "object" }
+      }
+    }
+  }
+}

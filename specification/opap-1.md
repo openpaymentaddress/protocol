@@ -14,6 +14,33 @@ OPAP resolves an HTTPS URL into a verified payment instruction. It is a discover
 protocol, not a wallet, payment institution, merchant account, payment router,
 settlement network, or product catalogue.
 
+### 1.1 Payment-instruction layer boundary
+
+OPAP is a transport and discovery layer for authenticated payment instructions.
+Its responsibility ends when a resolver has produced and immediately
+revalidated an immutable execution plan for handoff to an external wallet,
+payment rail, or executor.
+
+OPAP implementations MUST NOT hold or pool funds, maintain beneficiary
+balances, initiate or schedule settlement, perform currency conversion or
+netting, retry or compensate failed payments, reverse completed payments,
+allocate refunds or disputes, reconcile settlement, or determine whether an
+economic obligation has been fulfilled. Those responsibilities belong to the
+external application and settlement systems.
+
+Every executable Payment Option MUST compile to exactly one external executor
+invocation under one settlement context. A set of instructions requiring
+multiple independent executor invocations is not one atomic OPAP/1 Payment
+Option and MUST NOT be described as such. Applications MAY coordinate multiple
+OPAP-derived payments, but that coordination, its partial-failure semantics,
+and its completion state are outside OPAP/1.
+
+An underlying wallet, contract, bank, or payment rail may have its own custody
+and execution model. Describing that external option does not make OPAP a
+custodian or executor, and OPAP trust results MUST NOT be presented as an
+assurance about the external system's custody, solvency, reversibility, or
+settlement outcome.
+
 Examples of OPIDs:
 
 ```text
@@ -32,8 +59,9 @@ OPAP publishes one of two payment objects:
 - a delegation to another HTTPS OPID.
 
 A Payment Option may be a direct rail such as SEPA or ERC-20, an atomic split
-across fixed destinations, or a namespaced extension. A split is therefore one
-selectable way to satisfy a payment, not a separate top-level routing mode.
+across terminal addresses or stable OPIDs, or a namespaced extension. A split
+is therefore one selectable way to satisfy a payment, not a separate top-level
+routing mode.
 
 Amount, tax, product description, inventory, delivery, expiry, invoice status,
 and settlement status are application-level data. They are not inferred from a
@@ -224,16 +252,132 @@ duplicating payment destinations as product pages change.
 
 ### 6.4 Atomic split option
 
-A split option is one fixed, atomic payment instruction among the published
-alternatives. It MUST have one settlement currency, one network and one asset,
-fixed allocations, positive integer `share_ppm` values that sum exactly to
-1,000,000, deterministic rounding, and verified contract state. It MUST contain
-between two and sixteen allocations. Recipient addresses MUST be unique under
-case-insensitive comparison.
+A split option is one logical allocation instruction that compiles into one
+fixed, atomic execution plan among the published alternatives. It MUST have one
+settlement currency, one network and one asset, ordered logical allocations,
+positive integer `share_ppm` values that sum exactly to 1,000,000,
+deterministic rounding, and verified contract state. It MUST contain between
+two and sixteen allocations. Each allocation contains `share_ppm` and exactly
+one of:
 
-Allocation order is execution-significant: integer division is applied to all
-but the final allocation and the final allocation receives the remainder. An
-implementation MUST NOT reorder allocations. Nested splits are forbidden.
+- `recipient`, a terminal EVM address; or
+- `target`, a canonical HTTPS OPID to resolve under the split settlement
+  context.
+
+The settlement profile is the split's `currency` plus the execution `type`,
+`adapter`, `chain`, and `asset`. Target matching uses the fields a terminal
+option can publish: its type MUST be `erc20`, and its currency, chain, and asset
+MUST exactly equal the split profile. `adapter`, `contract`, and `config_id`
+remain properties of the root split executor and are not inherited from or
+matched against a target record. Address comparison is case-insensitive. After
+bounded delegation, the resolver MUST select the first matching option in the
+target's published option order, replace the logical target with that option's
+terminal `recipient` in the compiled plan, and preserve the root allocation's
+position and `share_ppm`. The target publisher therefore controls which of its
+compatible terminal addresses is selected through its published option order,
+subject to normal continuity and change confirmation; the root split publisher
+continues to control the settlement profile, allocation order, and shares.
+
+If a target is unavailable, malformed, untrusted, stale, or otherwise fails
+normal OPID resolution, the underlying fail-closed error applies. If it has no
+compatible terminal option but contains a split that matches the settlement
+context, resolution stops with `nested_split_unsupported`. If it has neither,
+resolution stops with `split_target_incompatible`.
+OPAP/1 does not flatten nested splits and a resolver MUST NOT treat a split
+contract, SEPA destination, extension option, or other incompatible option as a
+terminal allocation. A failure of an unselected split option does not invalidate
+other independently executable options in the root record; selecting or
+executing that split still fails closed and MUST NOT produce a partial payment.
+
+Before target resolution, terminal `recipient` values MUST be unique under
+case-insensitive comparison and `target` values MUST be unique as canonical
+OPIDs. After compilation, every terminal recipient MUST again be unique under
+case-insensitive comparison. A resolver MUST stop with
+`split_recipient_collision` rather than merge duplicate terminal recipients or
+their shares.
+
+Graph resolution and allocation compilation are pure protocol operations and
+MUST NOT call a concrete executor. After compilation, the configured adapter
+MUST separately verify before review and again before execution that
+`(chain, asset, contract, config_id)` is active and will execute the compiled
+ordered allocation list; a mismatch is `split_config_mismatch`.
+
+Allocation order is execution-significant. For an amount expressed as a
+non-negative integer number of the asset's atomic units, allocations other than
+the final one receive `floor(amount * share_ppm / 1000000)`, computed with exact
+integer arithmetic. The final allocation receives the original amount minus
+the sum of all earlier results. An implementation MUST NOT reorder allocations.
+
+### 6.5 Bounded payment graph resolution
+
+Delegation and OPID-targeted allocations form one directed graph whose node
+identity is the exact canonical OPID. A resolver MUST process root options in
+published order, allocation targets in allocation order, and delegation edges
+in encounter order. It MAY fetch independent nodes concurrently, but observable
+selection and error precedence MUST be the same as depth-first traversal in
+that order.
+
+One resolution, including the payer-supplied root, MUST enforce all of these
+limits:
+
+- at most eight OPID edges on any path;
+- at most 128 distinct OPIDs;
+- at most sixteen outgoing allocation targets from one split option;
+- at most eight simultaneous graph-record fetches;
+- at most 8,388,608 aggregate fetched record-body bytes;
+- at most thirty seconds total wall-clock resolution time; and
+- at most 256 compiled terminal allocation leaves across all root alternatives,
+  with at most sixteen in any one executable split.
+
+The per-response size and timeout limits in section 5 also apply. Exceeding any
+graph bound is `resolution_limit_exceeded`. Implementations MAY apply lower
+limits only as explicit payer policy and MUST NOT claim conformance for a graph
+that is within the bounds above but rejected solely by an undocumented limit.
+
+The traversal maintains both the active path and a global visited set.
+Encountering an OPID already on the active path is `resolution_cycle`;
+encountering one that was visited on another path is `duplicate_opid`. These
+checks occur before a cached result is reused. Thus cycles and convergent
+duplicate targets fail in a deterministic position rather than being silently
+coalesced.
+
+Every graph hostname is publisher-controlled input and MUST be treated as an
+untrusted network destination. Before each connection attempt, the resolver
+MUST resolve the hostname and reject the node with `target_address_forbidden`
+if any candidate address is loopback, private-use, link-local, carrier-grade
+NAT/shared, unspecified, documentation-only, benchmarking, multicast, reserved,
+or an IPv4-mapped form of such an IPv6 address. An IP-literal hostname is
+subject to the same test. An IPv4-embedded translation address, including the
+well-known NAT64 prefix, is permitted only when its embedded IPv4 destination
+passes the same test. Implementations SHOULD derive special-purpose ranges from
+the current IANA IPv4 and IPv6 Special-Purpose Address Registries rather than
+assume that a syntactically public-looking address is globally reachable.
+
+The resolver MUST connect only to an allowed address from that validated answer
+set while retaining the canonical hostname for TLS verification. It MUST NOT
+follow redirects, accept a certificate for the connected address in place of
+the hostname, or use an ambient proxy that can bypass the same destination
+policy. A retry performs a new resolution and the complete address test again.
+These requirements prevent DNS rebinding and server-side request forgery from
+turning publisher-supplied delegation or allocation targets into access to the
+resolver's local or privileged networks.
+
+### 6.6 Compatibility
+
+An allocation with `recipient` retains its existing OPAP/1 meaning and needs no
+migration. An allocation with `target` is an additive OPAP/1 record form; an
+older resolver using the earlier draft schema will reject the record as invalid
+rather than misdirect it. Publishers that require compatibility with such
+resolvers SHOULD continue publishing terminal-address allocations until target
+support is available to their payer population. OPAP/1 remains a draft, so this
+change retains `version: 1`; after version 1 is stable, an incompatible schema
+change requires explicit protocol-version negotiation.
+
+`config_id` remains an adapter-defined identifier owned by the root split. It
+does not come from a target record and its syntax is unchanged. Existing fixed
+address configurations compile to the published allocation list. Configurations
+using OPID targets compile to the resolved terminal list and are executable only
+when adapter verification confirms that exact result, as required above.
 
 ## 7. Binding, continuity, and origin-key epochs
 
@@ -404,7 +548,18 @@ whitespace, and arrays handled as follows:
   fields (SEPA currency and IBAN; ERC-20 currency, chain, asset, and recipient;
   split currency, adapter, chain, asset, contract, config ID, and the ordered
   allocation sequence; an extension option's type, currency, and complete
-  `data` object);
+  `data` object). The ordered split allocation sequence uses exactly these
+  logical object shapes before canonical key sorting:
+
+  ```json
+  {"recipient":"0x...","share_ppm":600000}
+  {"target":"https://alice.example/","share_ppm":400000,"terminal_opid":"https://alice.example/","selected":{"type":"erc20","currency":"EUR","chain":"eip155:100","asset":"0x...","recipient":"0x..."}}
+  ```
+
+  `terminal_opid` is the OPID containing the selected option after delegation.
+  Hexadecimal EVM addresses and `config_id` values in every projection are
+  lowercase. The target OPID's own complete projection and history are also
+  computed and stored independently;
 - a delegated source OPID: the resolved terminal OPID and that terminal
   projection.
 
@@ -429,14 +584,23 @@ For an OPID supplied by a payer or explicitly selected by the payer:
 4. Validate transport, JSON, schema, and exact `id` equality.
 5. Enforce `issued_at`, `expires_at`, and per-OPID revision history.
 6. Query the optional origin trust record; enforce its exact-host pin and proof.
-7. Resolve options or delegate semantics within the applicable bounds.
+7. Resolve options, delegation, and OPID-targeted allocations within the
+   applicable bounds, independently of any concrete payment executor.
 8. Compare and atomically persist key, revision, binding, and target history.
 9. Produce an immutable execution plan containing hostname, key fingerprint and
    epoch where applicable, binding, continuity, record revision and expiry,
-   exact-byte record fingerprint, and final options.
-10. Immediately before execution, repeat the resolution and stop with
-   `execution_changed` when recipient-affecting values or trust evidence differ
-   from the plan the payer reviewed.
+   exact-byte record fingerprint, and final options. For a payment graph this
+   evidence is included for the root and every resolved OPID in deterministic
+   traversal order, together with each target projection, selected option, and
+   compiled terminal allocation.
+10. Immediately before execution, re-resolve the complete graph and revalidate
+    every record and the adapter configuration. Compare graph node and edge
+    identity, trust results, target projections, selected options, and compiled
+    allocations with the immutable plan. Stop with `execution_changed` on any
+    difference in those recipient-affecting or trust values. A newer valid
+    revision, expiry, or exact-byte record fingerprint is retained as separate
+    revalidation evidence but does not alone change the reviewed execution when
+    its trust result and target projection are unchanged.
 
 Resolvers MUST NOT crawl links, inspect page HTML, infer a record from an
 ordinary URL, or send a speculative lookup without payer intent.
@@ -445,14 +609,81 @@ ordinary URL, or send a speculative lookup without payer intent.
 `execution_changed` is a within-payment review-versus-execution decision. They
 are distinct and non-overlapping; a flow MAY encounter either or both.
 
-### 9.1 Error codes
+Graph resolution and plan compilation MUST produce data, not perform payment
+execution. A concrete executor consumes only a reviewed, immutable, immediately
+revalidated plan. A plan MUST be described as an atomic split only when every
+compiled leaf shares the one settlement context and the adapter verifies one
+atomic execution. A mixed SEPA/blockchain or cross-network batch is never an
+atomic OPAP/1 split.
+
+### 9.1 Immutable execution plan
+
+One selected Payment Option is encoded using the normative OPAP/1 Execution
+Plan schema at `schema/open-payment-execution-plan-v1.schema.json`. The plan
+contains:
+
+- `version`, `protocol`, and the payer-supplied canonical `root_opid`;
+- a graph whose evidence nodes are in deterministic depth-first traversal order
+  and whose edges are in deterministic encounter order; and
+- exactly one `execution` object for one external executor invocation.
+
+Each evidence node contains the canonical OPID, hostname, derived record URL,
+record revision and expiry, exact-byte record fingerprint, binding, continuity,
+origin-key fingerprint and epoch where applicable, complete target projection
+and fingerprint, and the selected option projection where that node supplies
+an executable option. Graph OPIDs MUST be unique. A node with continuity
+`none` MUST omit `origin_key`; a node with continuity `first-use` or `bound`
+MUST include it.
+
+Every EVM address and `config_id` in a plan is lowercase. The plan is encoded
+as canonical JSON using the rules in section 8.1. Its plan fingerprint is
+`sha256:` followed by lowercase hexadecimal SHA-256 of those UTF-8 canonical
+JSON bytes. The fingerprint is carried alongside the immutable plan and is not
+embedded in the hashed object.
+
+The execution-plan schema intentionally leaves `target_projection` and
+`option_projection` structurally open so namespaced Payment Options can retain
+their complete recipient-affecting data. Schema validation alone does not
+establish projection correctness. A conforming resolver MUST construct both
+objects from already validated records using section 8.1 and MUST verify each
+`target_fingerprint` against the canonical target projection.
+
+Amount and economic context remain application data under section 1. A payer
+application MUST bind its reviewed amount, asset quantity, invoice or order
+reference, and the OPAP plan fingerprint in its own immutable authorization
+object. They MUST NOT be inserted into the OPAP plan or inferred by the
+resolver.
+
+### 9.2 External adapter boundary
+
+Split graph resolution and allocation compilation finish before adapter
+validation. The adapter receives only the selected adapter identifier,
+settlement currency, chain, asset, contract, opaque `config_id`, and compiled
+ordered terminal allocations. It MUST either confirm that one external
+invocation will execute that exact instruction or fail closed. It MUST NOT
+rewrite, reorder, merge, add, or remove allocations.
+
+`config_id` is an opaque 32-byte identifier whose interpretation belongs to
+the named adapter. Adapter validation MUST authenticate the relevant external
+configuration and establish that it is active for the exact compiled plan.
+Unknown adapters are unsupported options; a known adapter whose configuration
+does not match fails with `split_config_mismatch`. Validation does not execute,
+schedule, sign, custody, or settle a payment.
+
+### 9.3 Error codes
 
 In addition to transport, parsing, payment, and resolution errors defined
 elsewhere, implementations use: `dnssec_bogus`, `record_not_yet_valid`,
 `record_expired`, `record_rollback`, `record_revision_conflict`,
 `identity_key_changed`, `identity_key_rollback`,
 `identity_key_transition_invalid`, `payment_target_changed`, and
-`trust_history_unavailable`.
+`trust_history_unavailable`. Split graph resolution additionally uses
+`split_target_incompatible`, `nested_split_unsupported`,
+`split_config_mismatch`, `resolution_limit_exceeded`, `resolution_cycle`, and
+`duplicate_opid`. A collision between terminal recipients discovered only
+after target compilation uses `split_recipient_collision`. A graph hostname
+resolving to a forbidden network destination uses
+`target_address_forbidden`.
 
 ## 10. Publisher model
 
