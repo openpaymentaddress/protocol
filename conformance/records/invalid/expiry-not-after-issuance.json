@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "id": "https://MERCHANT.example/",
-  "revision": 7,
+  "id": "https://merchant.example/",
+  "revision": 9,
   "issued_at": "2026-07-22T12:00:00Z",
-  "expires_at": "2026-08-21T12:00:00Z",
+  "expires_at": "2026-07-22T12:00:00Z",
   "payment": { "type": "delegate", "target": "https://merchant.example/" }
 }

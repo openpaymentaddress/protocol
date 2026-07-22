@@ -1,0 +1,33 @@
+{
+  "hostname": "merchant.example",
+  "recoveryPublicKey": "GL5WbSJ7ENcS7X5g7BVxoOvW4mZyhFGJFosc_By5uhY",
+  "recoveryCommitment": "ed25519-sha256:z3l4IwyfWCUDGgnl49pEiv40nXZ-isFREc8HGwlS9eQ",
+  "keys": {
+    "a": "rvfodELbd45CXpY8meIGOl6GQtgIn2zd9Yu4MnLi2Kc",
+    "b": "5E5BvlKlD-7o9xT8NOKhu2EJKIJAmj3T0TID40AS05w",
+    "c": "4BPjEg_5Hk-SizZDNvUJi_xbHbd-zI67mDr5_BeQFuw"
+  },
+  "transitions": [
+    {
+      "fromEpoch": 1,
+      "fromKey": "a",
+      "toEpoch": 2,
+      "toKey": "b",
+      "message": "OPAP/1 KEY TRANSITION\nmerchant.example\ned25519-sha256:z3l4IwyfWCUDGgnl49pEiv40nXZ-isFREc8HGwlS9eQ\n1\nrvfodELbd45CXpY8meIGOl6GQtgIn2zd9Yu4MnLi2Kc\n2\n5E5BvlKlD-7o9xT8NOKhu2EJKIJAmj3T0TID40AS05w\n",
+      "signature": "nJpuFi-WsEgH4wZxm3DXd9tot2_mYEgVZeSEd-a4tvTSBoGrobhN7NAHlNFnMrkpQJVnk9vJzCdkN19dtiVPBw"
+    },
+    {
+      "fromEpoch": 2,
+      "fromKey": "b",
+      "toEpoch": 3,
+      "toKey": "c",
+      "message": "OPAP/1 KEY TRANSITION\nmerchant.example\ned25519-sha256:z3l4IwyfWCUDGgnl49pEiv40nXZ-isFREc8HGwlS9eQ\n2\n5E5BvlKlD-7o9xT8NOKhu2EJKIJAmj3T0TID40AS05w\n3\n4BPjEg_5Hk-SizZDNvUJi_xbHbd-zI67mDr5_BeQFuw\n",
+      "signature": "15Y6O3eBbcQL6Tr__4eddoPh_bm7lJYCp1U2zfWYwpxYPYPoz_X0INdNUhuvK4W0Shv11sx4gfUzJ5zufV0tDg"
+    }
+  ],
+  "trustRecords": {
+    "epoch1": "v=opap1;epoch=1;ed25519=rvfodELbd45CXpY8meIGOl6GQtgIn2zd9Yu4MnLi2Kc;rec=ed25519-sha256:z3l4IwyfWCUDGgnl49pEiv40nXZ-isFREc8HGwlS9eQ",
+    "epoch1Staged": "v=opap1;epoch=1;ed25519=rvfodELbd45CXpY8meIGOl6GQtgIn2zd9Yu4MnLi2Kc;rec=ed25519-sha256:z3l4IwyfWCUDGgnl49pEiv40nXZ-isFREc8HGwlS9eQ;next=5E5BvlKlD-7o9xT8NOKhu2EJKIJAmj3T0TID40AS05w;nextsig=nJpuFi-WsEgH4wZxm3DXd9tot2_mYEgVZeSEd-a4tvTSBoGrobhN7NAHlNFnMrkpQJVnk9vJzCdkN19dtiVPBw",
+    "epoch2Catchup": "v=opap1;epoch=2;ed25519=5E5BvlKlD-7o9xT8NOKhu2EJKIJAmj3T0TID40AS05w;rec=ed25519-sha256:z3l4IwyfWCUDGgnl49pEiv40nXZ-isFREc8HGwlS9eQ;previous=rvfodELbd45CXpY8meIGOl6GQtgIn2zd9Yu4MnLi2Kc;previoussig=nJpuFi-WsEgH4wZxm3DXd9tot2_mYEgVZeSEd-a4tvTSBoGrobhN7NAHlNFnMrkpQJVnk9vJzCdkN19dtiVPBw"
+  }
+}

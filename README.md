@@ -123,7 +123,7 @@ same-origin OPAP Record
         ↓
 schema, semantic and transport validation
         ↓
-optional DNSSEC-bound origin proof
+optional origin proof plus exact-host key continuity
         ↓
 immutable execution plan for a payer
 ```
@@ -136,7 +136,9 @@ OPAP publishes payment instructions. It does not hold funds, sign transactions, 
 | --- | --- |
 | [`specification/opap-1.md`](specification/opap-1.md) | Normative OPAP/1 specification |
 | [`schema/open-payment-address-v1.schema.json`](schema/open-payment-address-v1.schema.json) | Normative structural schema for an OPAP Record |
-| [`conformance/records`](conformance/records) | Portable valid and invalid protocol fixtures |
+| [`conformance/records`](conformance/records) | Portable valid and invalid record fixtures |
+| [`conformance/security`](conformance/security) | Recovery-commitment and signed key-transition vectors |
+| [`conformance/resolver-state`](conformance/resolver-state) | Trust, history, freshness, DNS, and revalidation scenarios |
 
 This repository intentionally excludes applications, SDKs, wallets, provider adapters, deployment instructions, hosting infrastructure, and reference implementations. Those belong in independent projects.
 
@@ -148,7 +150,13 @@ This repository intentionally excludes applications, SDKs, wallets, provider ada
 
 ## Security model
 
-Resolvers must fail closed on malformed identities, redirects, invalid transport profiles, schema or semantic failures, untrusted proofs, recursion limits, and recipient-affecting changes. The protocol validates exact record bytes and supports DNSSEC-bound Ed25519 origin keys; DNSSEC is an optional stronger verification level, not a replacement for HTTPS validation.
+Resolvers must fail closed on malformed identities, redirects, invalid transport profiles, schema or semantic failures, stale publications, record rollback, origin-key substitution, untrusted proofs or transitions, unavailable security history, recursion limits, and recipient-affecting changes. The protocol validates exact record bytes, pins Ed25519 authority by exact hostname after first successful use, and treats DNSSEC binding separately from key continuity.
+
+Continuity protects returning payers, not first use. It can turn a later origin
+takeover into a visible failure, but it cannot keep a lost hostname reachable,
+prevent denial of service, or protect a publisher whose signing key is stolen.
+A provider-held origin key is custodial publication authority for every OPID on
+that hostname. See the specification's limitations table for the exact claims.
 
 This repository is not a payment service and should not be represented as one. See [SECURITY.md](SECURITY.md) for vulnerability reporting and [the specification](specification/opap-1.md) for normative requirements.
 
