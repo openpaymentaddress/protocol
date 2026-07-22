@@ -7,6 +7,8 @@
 
 **Status:** Draft OPAP/1 specification. The specification and schema in this repository define the protocol; the conformance fixtures provide portable examples for implementers.
 
+The demonstrator (website) is here: [https://openpaymentaddress.org](https://openpaymentaddress.org)
+
 ## DNS for money
 
 **The internet has URLs. Now money does too.**
