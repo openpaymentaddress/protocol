@@ -148,19 +148,24 @@ has been fulfilled belongs to applications and settlement systems—not OPAP.
 | [`specification/opap-1.md`](specification/opap-1.md) | Normative OPAP/1 specification |
 | [`schema/open-payment-address-v1.schema.json`](schema/open-payment-address-v1.schema.json) | Normative structural schema for an OPAP Record |
 | [`schema/open-payment-execution-plan-v1.schema.json`](schema/open-payment-execution-plan-v1.schema.json) | Normative immutable execution-plan schema |
+| [`howto/cloudflare-pages.md`](howto/cloudflare-pages.md) | Non-normative guide for publishing a static OPID with Cloudflare Pages |
 | [`conformance/records`](conformance/records) | Portable valid and invalid record fixtures |
 | [`conformance/execution-plans`](conformance/execution-plans) | Exact immutable execution-plan vectors and fingerprints |
 | [`conformance/split-resolution`](conformance/split-resolution) | OPID-targeted split compilation scenarios |
 | [`conformance/security`](conformance/security) | Recovery-commitment and signed key-transition vectors |
 | [`conformance/resolver-state`](conformance/resolver-state) | Trust, history, freshness, DNS, and revalidation scenarios |
 
-This repository intentionally excludes applications, SDKs, wallets, provider adapters, deployment instructions, hosting infrastructure, and reference implementations. Those belong in independent projects.
+This repository intentionally excludes applications, SDKs, wallets, provider
+adapters, hosting infrastructure, and reference implementations. Non-normative
+operational guides may document provider-specific publication procedures
+without changing OPAP's normative requirements.
 
 ## Start here
 
 - [OPAP/1 specification](specification/opap-1.md)
 - [OPAP Record JSON Schema](schema/open-payment-address-v1.schema.json)
 - [Conformance fixture manifest](conformance/records/manifest.json)
+- [Publish an OPID with Cloudflare Pages](howto/cloudflare-pages.md)
 
 ## Validate conformance
 
