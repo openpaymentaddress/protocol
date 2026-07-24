@@ -2,6 +2,7 @@
   "version": 1,
   "protocol": "OPAP/1",
   "root_opid": "https://split.example/opid-target",
+  "prior_evidence": "none",
   "graph": {
     "nodes": [
       {
@@ -13,6 +14,7 @@
         "record_fingerprint": "sha256:2d3c53fca6bdaab76360bfb12ac92d7490f82aeb33260bab18da955cc662512f",
         "binding": "https",
         "continuity": "none",
+        "history": "none",
         "target_projection": {
           "options": [
             {
@@ -85,6 +87,7 @@
         "record_fingerprint": "sha256:76f357303df60380864f00a8e571ef8f697eda0d6f14ab2cfb4114df799d94b6",
         "binding": "https",
         "continuity": "none",
+        "history": "none",
         "target_projection": {
           "options": [
             {

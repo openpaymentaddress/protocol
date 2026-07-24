@@ -278,8 +278,10 @@ function semanticRecordDiagnostics(record) {
 const ajv = new Ajv2020({ allErrors: true, strict: true, strictRequired: false });
 const recordSchema = readJson("schema/open-payment-address-v1.schema.json");
 const planSchema = readJson("schema/open-payment-execution-plan-v1.schema.json");
+const evidenceSchema = readJson("schema/open-payment-continuity-evidence-v1.schema.json");
 const validateRecordSchema = ajv.compile(recordSchema);
 const validatePlanSchema = ajv.compile(planSchema);
+const validateEvidenceSchema = ajv.compile(evidenceSchema);
 
 function schemaDiagnostics(validator) {
   return (validator.errors ?? []).map((error) => `${error.instancePath || "/"}:${error.schemaPath}:${error.message}`);
@@ -350,6 +352,7 @@ function buildCompatiblePlan(rootPath, targetPath) {
     record_fingerprint: fingerprint(readBytes(relativePath)),
     binding: "https",
     continuity: "none",
+    history: "none",
     target_projection: projection,
     target_fingerprint: fingerprint(canonicalJson(projection)),
     selection
@@ -359,6 +362,7 @@ function buildCompatiblePlan(rootPath, targetPath) {
     version: 1,
     protocol: "OPAP/1",
     root_opid: root.id,
+    prior_evidence: "none",
     graph: {
       nodes: [
         node(rootPath, root, rootProjection, { option_index: optionIndex, option_projection: splitProjection }),
@@ -396,6 +400,8 @@ function validatePlanSemantics(plan, label) {
   for (const node of plan.graph.nodes) {
     check(node.target_fingerprint === fingerprint(canonicalJson(node.target_projection)), `${label}: wrong target fingerprint for ${node.opid}`);
     check((node.continuity === "none") === !("origin_key" in node), `${label}: origin_key presence conflicts with continuity for ${node.opid}`);
+    check(plan.prior_evidence === "available" || node.history === "none", `${label}: node reports history when prior evidence is none for ${node.opid}`);
+    check(plan.prior_evidence === "available" || node.continuity !== "bound", `${label}: node is continuity-bound when prior evidence is none for ${node.opid}`);
   }
   for (const edge of plan.graph.edges) {
     check(opids.includes(edge.from) && opids.includes(edge.to), `${label}: edge refers to an unknown node`);
@@ -412,6 +418,298 @@ function validatePlanSemantics(plan, label) {
     check(plan.execution.allocations.reduce((sum, allocation) => sum + allocation.share_ppm, 0) === 1_000_000, `${label}: compiled shares do not sum to 1000000`);
     const recipients = plan.execution.allocations.map((allocation) => allocation.recipient.toLowerCase());
     check(new Set(recipients).size === recipients.length, `${label}: compiled recipients are not unique`);
+  }
+}
+
+function compareUtf8(left, right) {
+  return Buffer.compare(Buffer.from(left), Buffer.from(right));
+}
+
+function strongerBinding(left, right) {
+  return left === "dnssec" || right === "dnssec" ? "dnssec" : "https";
+}
+
+function keyFingerprint(publicKey) {
+  return fingerprint(Buffer.from(publicKey, "base64url"));
+}
+
+function transitionMessage(hostname, recoveryCommitment, fromEpoch, fromKey, toEpoch, toKey) {
+  return `OPAP/1 KEY TRANSITION\n${hostname}\n${recoveryCommitment}\n${fromEpoch}\n${fromKey}\n${toEpoch}\n${toKey}\n`;
+}
+
+function verifyTransition(hostname, recoveryCommitment, fromEpoch, fromKey, next) {
+  const spkiPrefix = Buffer.from("302a300506032b6570032100", "hex");
+  const publicKey = crypto.createPublicKey({
+    key: Buffer.concat([spkiPrefix, Buffer.from(fromKey, "base64url")]),
+    format: "der",
+    type: "spki"
+  });
+  return next.epoch === fromEpoch + 1
+    && crypto.verify(
+      null,
+      Buffer.from(transitionMessage(hostname, recoveryCommitment, fromEpoch, fromKey, next.epoch, next.public_key)),
+      publicKey,
+      Buffer.from(next.transition_signature, "base64url")
+    );
+}
+
+function sortedUnique(items, identity) {
+  const values = items.map(identity);
+  return new Set(values).size === values.length
+    && values.every((value, index) => index === 0 || compareUtf8(values[index - 1], value) < 0);
+}
+
+function evidenceDiagnostics(envelope) {
+  const diagnostics = [];
+  const valid = validateEvidenceSchema(envelope);
+  if (!valid) return schemaDiagnostics(validateEvidenceSchema);
+  if (envelope.state !== "available") return diagnostics;
+  if (!sortedUnique(envelope.evidence.hosts, (host) => host.hostname)) diagnostics.push("hosts are not unique and sorted");
+  if (!sortedUnique(envelope.evidence.opids, (opid) => opid.opid)) diagnostics.push("OPIDs are not unique and sorted");
+  const hosts = new Map(envelope.evidence.hosts.map((host) => [host.hostname, host]));
+  const usedHostnames = new Set();
+  for (const host of envelope.evidence.hosts) {
+    if (host.authentication !== "origin-key") continue;
+    if (host.key_fingerprint !== keyFingerprint(host.public_key)) diagnostics.push(`wrong key fingerprint for ${host.hostname}`);
+    if (host.retired_key_fingerprints.includes(host.key_fingerprint)) diagnostics.push(`current key is retired for ${host.hostname}`);
+    if (!sortedUnique(host.retired_key_fingerprints, (value) => value)) diagnostics.push(`retired keys are not unique and sorted for ${host.hostname}`);
+    if (host.authenticated_next) {
+      if (host.authenticated_next.key_fingerprint !== keyFingerprint(host.authenticated_next.public_key)) diagnostics.push(`wrong successor fingerprint for ${host.hostname}`);
+      if (host.authenticated_next.key_fingerprint === host.key_fingerprint
+          || host.retired_key_fingerprints.includes(host.authenticated_next.key_fingerprint)) {
+        diagnostics.push(`successor is current or retired for ${host.hostname}`);
+      }
+      try {
+        if (!verifyTransition(host.hostname, host.recovery_commitment, host.epoch, host.public_key, host.authenticated_next)) diagnostics.push(`invalid authenticated successor for ${host.hostname}`);
+      } catch {
+        diagnostics.push(`invalid authenticated successor for ${host.hostname}`);
+      }
+    }
+  }
+  for (const opid of envelope.evidence.opids) {
+    if (!canonicalOpid(opid.opid)) {
+      diagnostics.push(`noncanonical evidence OPID ${opid.opid}`);
+      continue;
+    }
+    if (new URL(opid.opid).hostname !== opid.hostname) diagnostics.push(`OPID hostname mismatch for ${opid.opid}`);
+    const host = hosts.get(opid.hostname);
+    if (!host) {
+      diagnostics.push(`OPID has no host evidence for ${opid.opid}`);
+    } else {
+      usedHostnames.add(host.hostname);
+      if (opid.authentication === "origin-key" && host.authentication !== "origin-key") diagnostics.push(`OPID authentication exceeds host evidence for ${opid.opid}`);
+      if (opid.highest_binding === "dnssec" && host.highest_binding !== "dnssec") diagnostics.push(`OPID binding exceeds host evidence for ${opid.opid}`);
+    }
+    if (opid.target_fingerprint !== fingerprint(canonicalJson(opid.target_projection))) diagnostics.push(`wrong target fingerprint for ${opid.opid}`);
+  }
+  for (const hostname of hosts.keys()) {
+    if (!usedHostnames.has(hostname)) diagnostics.push(`host has no OPID evidence for ${hostname}`);
+  }
+  return diagnostics;
+}
+
+function validateEvidenceSemantics(envelope, label, expectedValid = true) {
+  const diagnostics = evidenceDiagnostics(envelope);
+  check((diagnostics.length === 0) === expectedValid, `${label}: expected evidence valid=${expectedValid}, got: ${diagnostics.join(" | ") || "valid"}`);
+}
+
+function validateCurrentEvidence(current, label) {
+  check(sortedUnique(current.hosts, (host) => host.hostname), `${label}: current hosts are not unique and sorted`);
+  check(sortedUnique(current.opids, (opid) => opid.opid), `${label}: current OPIDs are not unique and sorted`);
+  const hosts = new Map(current.hosts.map((host) => [host.hostname, host]));
+  for (const host of current.hosts) {
+    check(["https", "dnssec"].includes(host.binding), `${label}: invalid binding for ${host.hostname}`);
+    check(["unsigned", "origin-key"].includes(host.authentication), `${label}: invalid authentication for ${host.hostname}`);
+    if (host.authentication === "origin-key") {
+      check(Number.isSafeInteger(host.epoch) && host.epoch >= 1, `${label}: invalid epoch for ${host.hostname}`);
+      check(Buffer.from(host.public_key, "base64url").length === 32, `${label}: invalid public key for ${host.hostname}`);
+      if (host.next) check(verifyTransition(host.hostname, host.recovery_commitment, host.epoch, host.public_key, host.next), `${label}: invalid current successor for ${host.hostname}`);
+    }
+  }
+  for (const opid of current.opids) {
+    check(canonicalOpid(opid.opid), `${label}: noncanonical current OPID ${opid.opid}`);
+    check(new URL(opid.opid).hostname === opid.hostname, `${label}: current OPID hostname mismatch for ${opid.opid}`);
+    check(hosts.has(opid.hostname), `${label}: current OPID has no host input for ${opid.opid}`);
+    check(hosts.get(opid.hostname)?.binding === opid.binding, `${label}: current OPID binding differs from host for ${opid.opid}`);
+    check(hosts.get(opid.hostname)?.authentication === opid.authentication, `${label}: current OPID authentication differs from host for ${opid.opid}`);
+    check(opid.target_fingerprint === fingerprint(canonicalJson(opid.target_projection)), `${label}: wrong current target fingerprint for ${opid.opid}`);
+  }
+}
+
+function proposedHostEvidence(current, prior) {
+  if (current.authentication === "unsigned") {
+    return {
+      hostname: current.hostname,
+      highest_binding: strongerBinding(prior?.highest_binding, current.binding),
+      authentication: "unsigned"
+    };
+  }
+  const currentFingerprint = keyFingerprint(current.public_key);
+  const retired = prior?.authentication === "origin-key"
+    ? [...prior.retired_key_fingerprints, ...(prior.key_fingerprint === currentFingerprint ? [] : [prior.key_fingerprint])]
+    : [];
+  const proposal = {
+    hostname: current.hostname,
+    highest_binding: strongerBinding(prior?.highest_binding, current.binding),
+    authentication: "origin-key",
+    epoch: current.epoch,
+    public_key: current.public_key,
+    key_fingerprint: currentFingerprint,
+    recovery_commitment: current.recovery_commitment,
+    retired_key_fingerprints: [...new Set(retired)].sort(compareUtf8)
+  };
+  if (current.next) {
+    proposal.authenticated_next = {
+      epoch: current.next.epoch,
+      public_key: current.next.public_key,
+      key_fingerprint: keyFingerprint(current.next.public_key),
+      transition_signature: current.next.transition_signature
+    };
+  } else if (prior?.authentication === "origin-key"
+      && prior.key_fingerprint === currentFingerprint
+      && prior.authenticated_next) {
+    proposal.authenticated_next = structuredClone(prior.authenticated_next);
+  }
+  return proposal;
+}
+
+function proposedOpidEvidence(current, prior) {
+  return {
+    opid: current.opid,
+    hostname: current.hostname,
+    revision: current.revision,
+    record_fingerprint: current.record_fingerprint,
+    target_projection: structuredClone(current.target_projection),
+    target_fingerprint: current.target_fingerprint,
+    highest_binding: strongerBinding(prior?.highest_binding, current.binding),
+    authentication: current.authentication
+  };
+}
+
+function proposedEnvelope(current, priorEnvelope) {
+  const priorHosts = new Map((priorEnvelope.evidence?.hosts ?? []).map((host) => [host.hostname, host]));
+  const priorOpids = new Map((priorEnvelope.evidence?.opids ?? []).map((opid) => [opid.opid, opid]));
+  return {
+    version: 1,
+    protocol: "OPAP/1",
+    state: "available",
+    evidence: {
+      hosts: current.hosts.map((host) => proposedHostEvidence(host, priorHosts.get(host.hostname))),
+      opids: current.opids.map((opid) => proposedOpidEvidence(opid, priorOpids.get(opid.opid)))
+    }
+  };
+}
+
+function continuityError(reason, priorEvidence, current, exposeChange = false) {
+  return {
+    result: "error",
+    reason,
+    ...(exposeChange ? {
+      old_evidence: structuredClone(priorEvidence),
+      proposed_evidence: proposedEnvelope(current, priorEvidence)
+    } : { proposed_evidence: null })
+  };
+}
+
+function evaluateContinuity(current, priorEvidence) {
+  if (priorEvidence?.state === "unavailable") return continuityError("trust_history_unavailable", priorEvidence, current);
+  if (evidenceDiagnostics(priorEvidence).length > 0) return continuityError("trust_history_unavailable", priorEvidence, current);
+  const priorHosts = new Map((priorEvidence.evidence?.hosts ?? []).map((host) => [host.hostname, host]));
+  const priorOpids = new Map((priorEvidence.evidence?.opids ?? []).map((opid) => [opid.opid, opid]));
+  const hostContinuity = new Map();
+
+  for (const host of current.hosts) {
+    const prior = priorHosts.get(host.hostname);
+    if (host.authentication === "unsigned") {
+      if (prior?.authentication === "origin-key") return continuityError("identity_key_changed", priorEvidence, current, true);
+      hostContinuity.set(host.hostname, "none");
+      continue;
+    }
+    if (!prior || prior.authentication === "unsigned") {
+      hostContinuity.set(host.hostname, "first-use");
+      continue;
+    }
+    const currentFingerprint = keyFingerprint(host.public_key);
+    if (host.recovery_commitment !== prior.recovery_commitment) {
+      return continuityError("identity_key_transition_invalid", priorEvidence, current);
+    }
+    if (prior.retired_key_fingerprints.includes(currentFingerprint) || host.epoch < prior.epoch) {
+      return continuityError("identity_key_rollback", priorEvidence, current);
+    }
+    if (host.epoch === prior.epoch) {
+      if (currentFingerprint !== prior.key_fingerprint) return continuityError("identity_key_changed", priorEvidence, current, true);
+      if (host.next && prior.authenticated_next
+          && keyFingerprint(host.next.public_key) !== prior.authenticated_next.key_fingerprint) {
+        return continuityError("identity_key_transition_invalid", priorEvidence, current);
+      }
+      hostContinuity.set(host.hostname, "bound");
+      continue;
+    }
+    if (host.epoch !== prior.epoch + 1) return continuityError("identity_key_transition_invalid", priorEvidence, current);
+    const staged = prior.authenticated_next;
+    const acceptedStaged = staged?.epoch === host.epoch && staged.key_fingerprint === currentFingerprint;
+    const acceptedCatchup = host.previous?.epoch === prior.epoch
+      && host.previous.public_key === prior.public_key
+      && verifyTransition(host.hostname, host.recovery_commitment, host.previous.epoch, host.previous.public_key, {
+        epoch: host.epoch,
+        public_key: host.public_key,
+        transition_signature: host.previous.transition_signature
+      });
+    if (!acceptedStaged && !acceptedCatchup) return continuityError("identity_key_transition_invalid", priorEvidence, current);
+    hostContinuity.set(host.hostname, "bound");
+  }
+
+  const nodeResults = [];
+  for (const opid of current.opids) {
+    const prior = priorOpids.get(opid.opid);
+    if (prior) {
+      if (opid.revision < prior.revision) return continuityError("record_rollback", priorEvidence, current);
+      if (opid.revision === prior.revision && opid.record_fingerprint !== prior.record_fingerprint) {
+        return continuityError("record_revision_conflict", priorEvidence, current);
+      }
+      if (opid.target_fingerprint !== prior.target_fingerprint) {
+        return continuityError("payment_target_changed", priorEvidence, current, true);
+      }
+    }
+    nodeResults.push({
+      opid: opid.opid,
+      history: prior ? "available" : "none",
+      continuity: hostContinuity.get(opid.hostname)
+    });
+  }
+  return {
+    result: "success",
+    node_results: nodeResults,
+    proposed_evidence: proposedEnvelope(current, priorEvidence)
+  };
+}
+
+function runContinuityFixtures() {
+  const manifest = readJson("conformance/resolver-state/manifest.json");
+  check(manifest.evidenceTransitions === "evidence-transition-vectors.json", "resolver-state manifest does not point to evidence-transition vectors");
+  const recordManifestPath = path.posix.normalize(`conformance/resolver-state/${manifest.recordFixtures}`);
+  const keyVectorsPath = path.posix.normalize(`conformance/resolver-state/${manifest.keyTransitionVectors}`);
+  check(Array.isArray(readJson(recordManifestPath).valid), "resolver-state manifest does not point to record fixtures");
+  check(Array.isArray(readJson(keyVectorsPath).transitions), "resolver-state manifest does not point to key-transition vectors");
+  const vectors = readJson(`conformance/resolver-state/${manifest.evidenceTransitions}`);
+  const availableFixture = vectors.vectors.find((vector) => vector.prior_evidence.state === "available").prior_evidence.evidence;
+  check(!validateEvidenceSchema({ version: 1, protocol: "OPAP/1", state: "none", evidence: availableFixture }), "evidence schema accepted data with state none");
+  check(!validateEvidenceSchema({ version: 1, protocol: "OPAP/1", state: "available" }), "evidence schema accepted available without a bundle");
+  check(!validateEvidenceSchema({ version: 1, protocol: "OPAP/1", state: "unavailable", evidence: availableFixture }), "evidence schema accepted data with state unavailable");
+  for (const vector of vectors.vectors) {
+    validateEvidenceSemantics(vector.prior_evidence, `${vector.id}: prior`, vector.prior_evidence_valid !== false);
+    if (vector.expected.old_evidence) validateEvidenceSemantics(vector.expected.old_evidence, `${vector.id}: expected old`);
+    if (vector.expected.proposed_evidence) validateEvidenceSemantics(vector.expected.proposed_evidence, `${vector.id}: expected proposed`);
+    validateCurrentEvidence(vector.current, vector.id);
+    const inputBefore = canonicalJson(vector.prior_evidence);
+    const actual = evaluateContinuity(vector.current, vector.prior_evidence);
+    const repeated = evaluateContinuity(vector.current, vector.prior_evidence);
+    check(canonicalJson(vector.prior_evidence) === inputBefore, `${vector.id}: evaluator mutated caller-supplied prior evidence`);
+    check(canonicalJson(repeated) === canonicalJson(actual), `${vector.id}: repeated pure evaluation was not deterministic`);
+    check(canonicalJson(actual) === canonicalJson(vector.expected), `${vector.id}: continuity result differs from exact vector`);
+    if (actual.result === "error" && !["identity_key_changed", "payment_target_changed"].includes(actual.reason)) {
+      check(actual.proposed_evidence === null, `${vector.id}: ordinary failure proposed replacement evidence`);
+    }
   }
 }
 
@@ -505,7 +803,10 @@ function runDocumentationLinks() {
     "SECURITY.md",
     ...fs.readdirSync(path.join(repoRoot, "specification"))
       .filter((file) => file.endsWith(".md"))
-      .map((file) => `specification/${file}`)
+      .map((file) => `specification/${file}`),
+    ...fs.readdirSync(path.join(repoRoot, "howto"))
+      .filter((file) => file.endsWith(".md"))
+      .map((file) => `howto/${file}`)
   ];
   const linkPattern = /\[[^\]]*\]\(([^)]+)\)/gu;
   for (const markdownPath of markdownFiles) {
@@ -551,6 +852,16 @@ function runSplitFixtures() {
   const multipleExecutions = structuredClone(expectedPlan);
   multipleExecutions.execution = [expectedPlan.execution, expectedPlan.execution];
   check(!validatePlanSchema(multipleExecutions), "execution-plan schema accepted multiple executor invocations");
+  const availableHistoryPlan = structuredClone(expectedPlan);
+  availableHistoryPlan.prior_evidence = "available";
+  for (const node of availableHistoryPlan.graph.nodes) node.history = "available";
+  check(validatePlanSchema(availableHistoryPlan), `execution-plan schema rejected available history: ${schemaDiagnostics(validatePlanSchema).join(" | ")}`);
+  const hiddenHistoryPlan = structuredClone(expectedPlan);
+  hiddenHistoryPlan.graph.nodes[0].history = "available";
+  check(!validatePlanSchema(hiddenHistoryPlan), "execution-plan schema accepted available history with prior evidence none");
+  const unavailableEvidencePlan = structuredClone(expectedPlan);
+  unavailableEvidencePlan.prior_evidence = "unavailable";
+  check(!validatePlanSchema(unavailableEvidencePlan), "execution-plan schema accepted unavailable evidence as a successful plan");
 
   const split = readJson(rootPath).payment.options[0];
   const compatible = readJson(targetPath);
@@ -627,6 +938,7 @@ function runNetworkFixtures() {
 runJsonSyntax();
 runDocumentationLinks();
 runRecordFixtures();
+runContinuityFixtures();
 runSplitFixtures();
 runLimitFixtures();
 runNetworkFixtures();

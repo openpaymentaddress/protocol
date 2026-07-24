@@ -121,6 +121,15 @@ A split allocation may name either a terminal address or another canonical
 OPID; the resolver resolves OPID targets under the split's settlement context
 and freezes every target's trust and record evidence into the reviewed plan.
 
+Cross-resolution continuity is caller-controlled. Each call explicitly supplies
+prior evidence as `none`, `available`, or `unavailable`. A clean or deliberately
+stateless caller can use `none` and receive a conforming result that discloses
+the absence of history. With `available`, OPAP deterministically checks key
+lineage, revision, binding, and payment-target continuity. `unavailable`
+preserves fail-closed behavior when expected evidence could not be loaded or
+validated. The resolver proposes portable next evidence but never opens, owns,
+or writes a continuity database.
+
 ```text
 canonical HTTPS OPID
         ↓
@@ -128,9 +137,11 @@ same-origin OPAP Record
         ↓
 schema, semantic and transport validation
         ↓
-optional origin proof plus exact-host key continuity
+current-publication trust evaluation
+        +
+caller-supplied prior evidence, when available
         ↓
-immutable execution plan for a payer
+immutable execution plan + proposed next evidence
 ```
 
 OPAP publishes payment instructions. It does not hold funds, sign transactions, custody keys, operate a wallet, settle a payment, mandate a blockchain or payment provider, or require cloud hosting.
@@ -148,12 +159,13 @@ has been fulfilled belongs to applications and settlement systems—not OPAP.
 | [`specification/opap-1.md`](specification/opap-1.md) | Normative OPAP/1 specification |
 | [`schema/open-payment-address-v1.schema.json`](schema/open-payment-address-v1.schema.json) | Normative structural schema for an OPAP Record |
 | [`schema/open-payment-execution-plan-v1.schema.json`](schema/open-payment-execution-plan-v1.schema.json) | Normative immutable execution-plan schema |
+| [`schema/open-payment-continuity-evidence-v1.schema.json`](schema/open-payment-continuity-evidence-v1.schema.json) | Normative portable prior/proposed continuity-evidence schema |
 | [`howto/cloudflare-pages.md`](howto/cloudflare-pages.md) | Non-normative guide for publishing a static OPID with Cloudflare Pages |
 | [`conformance/records`](conformance/records) | Portable valid and invalid record fixtures |
 | [`conformance/execution-plans`](conformance/execution-plans) | Exact immutable execution-plan vectors and fingerprints |
 | [`conformance/split-resolution`](conformance/split-resolution) | OPID-targeted split compilation scenarios |
 | [`conformance/security`](conformance/security) | Recovery-commitment and signed key-transition vectors |
-| [`conformance/resolver-state`](conformance/resolver-state) | Trust, history, freshness, DNS, and revalidation scenarios |
+| [`conformance/resolver-state`](conformance/resolver-state) | Store-independent evidence transitions plus trust, freshness, DNS, and revalidation scenarios |
 
 This repository intentionally excludes applications, SDKs, wallets, provider
 adapters, hosting infrastructure, and reference implementations. Non-normative
@@ -164,6 +176,7 @@ without changing OPAP's normative requirements.
 
 - [OPAP/1 specification](specification/opap-1.md)
 - [OPAP Record JSON Schema](schema/open-payment-address-v1.schema.json)
+- [OPAP continuity-evidence JSON Schema](schema/open-payment-continuity-evidence-v1.schema.json)
 - [Conformance fixture manifest](conformance/records/manifest.json)
 - [Publish an OPID with Cloudflare Pages](howto/cloudflare-pages.md)
 
@@ -183,13 +196,23 @@ that check required before merging changes to a protected branch.
 
 ## Security model
 
-Resolvers must fail closed on malformed identities, redirects, invalid transport profiles, schema or semantic failures, stale publications, record rollback, origin-key substitution, untrusted proofs or transitions, unavailable security history, recursion limits, and recipient-affecting changes. The protocol validates exact record bytes, pins Ed25519 authority by exact hostname after first successful use, and treats DNSSEC binding separately from key continuity.
+Resolvers must fail closed on malformed identities, redirects, invalid transport
+profiles, schema or semantic failures, stale publications, untrusted proofs,
+recursion limits, and recipient-affecting changes. When the caller supplies
+validated prior evidence, the same pure evaluation also enforces exact-host
+Ed25519 lineage, record rollback, revision conflicts, and payment-target
+continuity. Expected evidence reported as `unavailable` fails closed with
+`trust_history_unavailable`; explicit `none` validates only the current
+publication and claims no cross-resolution protection.
 
-Continuity protects returning payers, not first use. It can turn a later origin
-takeover into a visible failure, but it cannot keep a lost hostname reachable,
-prevent denial of service, or protect a publisher whose signing key is stolen.
-A provider-held origin key is custodial publication authority for every OPID on
-that hostname. See the specification's limitations table for the exact claims.
+Continuity protects returning payers only when suitable prior evidence is
+supplied. It can turn a later origin takeover into a visible failure, but it
+cannot keep a lost hostname reachable, prevent denial of service, or protect a
+publisher whose signing key is stolen. Applications own any evidence storage,
+confirmation, and explicit commit; none of those actions is OPAP payment
+execution or custody. A provider-held origin key is custodial publication
+authority for every OPID on that hostname. See the specification's limitations
+table for the exact claims.
 
 This repository is not a payment service and should not be represented as one. See [SECURITY.md](SECURITY.md) for vulnerability reporting and [the specification](specification/opap-1.md) for normative requirements.
 

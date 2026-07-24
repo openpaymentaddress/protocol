@@ -1,0 +1,166 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openpaymentaddress.org/schema/opap-continuity-evidence-v1.json",
+  "title": "Open Payment Address Protocol v1 Continuity Evidence",
+  "description": "Portable caller-supplied prior evidence and resolver-proposed next evidence for OPAP/1 continuity evaluation.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "protocol", "state"],
+  "properties": {
+    "version": { "const": 1 },
+    "protocol": { "const": "OPAP/1" },
+    "state": { "enum": ["none", "available", "unavailable"] },
+    "evidence": { "$ref": "#/$defs/evidenceBundle" }
+  },
+  "oneOf": [
+    {
+      "properties": { "state": { "const": "none" } },
+      "not": { "required": ["evidence"] }
+    },
+    {
+      "properties": { "state": { "const": "unavailable" } },
+      "not": { "required": ["evidence"] }
+    },
+    {
+      "properties": { "state": { "const": "available" } },
+      "required": ["evidence"]
+    }
+  ],
+  "$defs": {
+    "opid": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 512,
+      "pattern": "^https://[^/?#:]+/(?:[A-Za-z0-9._~/-]|%[0-9A-F]{2})*$"
+    },
+    "hostname": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 253,
+      "pattern": "^[a-z0-9.-]+$"
+    },
+    "fingerprint": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "publicKey": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{43}$"
+    },
+    "signature": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{86}$"
+    },
+    "epoch": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "recoveryCommitment": {
+      "type": "string",
+      "pattern": "^(?:none|ed25519-sha256:[A-Za-z0-9_-]{43})$"
+    },
+    "authenticatedNext": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["epoch", "public_key", "key_fingerprint", "transition_signature"],
+      "properties": {
+        "epoch": { "$ref": "#/$defs/epoch" },
+        "public_key": { "$ref": "#/$defs/publicKey" },
+        "key_fingerprint": { "$ref": "#/$defs/fingerprint" },
+        "transition_signature": { "$ref": "#/$defs/signature" }
+      }
+    },
+    "unsignedHostEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["hostname", "highest_binding", "authentication"],
+      "properties": {
+        "hostname": { "$ref": "#/$defs/hostname" },
+        "highest_binding": { "enum": ["https", "dnssec"] },
+        "authentication": { "const": "unsigned" }
+      }
+    },
+    "originKeyHostEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "hostname",
+        "highest_binding",
+        "authentication",
+        "epoch",
+        "public_key",
+        "key_fingerprint",
+        "recovery_commitment",
+        "retired_key_fingerprints"
+      ],
+      "properties": {
+        "hostname": { "$ref": "#/$defs/hostname" },
+        "highest_binding": { "enum": ["https", "dnssec"] },
+        "authentication": { "const": "origin-key" },
+        "epoch": { "$ref": "#/$defs/epoch" },
+        "public_key": { "$ref": "#/$defs/publicKey" },
+        "key_fingerprint": { "$ref": "#/$defs/fingerprint" },
+        "recovery_commitment": { "$ref": "#/$defs/recoveryCommitment" },
+        "authenticated_next": { "$ref": "#/$defs/authenticatedNext" },
+        "retired_key_fingerprints": {
+          "type": "array",
+          "maxItems": 1024,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/fingerprint" }
+        }
+      }
+    },
+    "hostEvidence": {
+      "oneOf": [
+        { "$ref": "#/$defs/unsignedHostEvidence" },
+        { "$ref": "#/$defs/originKeyHostEvidence" }
+      ]
+    },
+    "opidEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "opid",
+        "hostname",
+        "revision",
+        "record_fingerprint",
+        "target_projection",
+        "target_fingerprint",
+        "highest_binding",
+        "authentication"
+      ],
+      "properties": {
+        "opid": { "$ref": "#/$defs/opid" },
+        "hostname": { "$ref": "#/$defs/hostname" },
+        "revision": { "$ref": "#/$defs/epoch" },
+        "record_fingerprint": { "$ref": "#/$defs/fingerprint" },
+        "target_projection": { "type": "object" },
+        "target_fingerprint": { "$ref": "#/$defs/fingerprint" },
+        "highest_binding": { "enum": ["https", "dnssec"] },
+        "authentication": { "enum": ["unsigned", "origin-key"] }
+      }
+    },
+    "evidenceBundle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["hosts", "opids"],
+      "properties": {
+        "hosts": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 128,
+          "$comment": "Entries are unique and sorted by hostname using ascending UTF-8 byte order.",
+          "items": { "$ref": "#/$defs/hostEvidence" }
+        },
+        "opids": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 128,
+          "$comment": "Entries are unique and sorted by canonical opid using ascending UTF-8 byte order.",
+          "items": { "$ref": "#/$defs/opidEvidence" }
+        }
+      }
+    }
+  }
+}

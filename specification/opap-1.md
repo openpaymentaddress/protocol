@@ -2,7 +2,7 @@
 
 **A URL-native, non-custodial address layer for payments**
 
-Protocol version 1 · 22 July 2026
+Protocol version 1 · 23 July 2026
 
 **Status:** Draft specification.
 
@@ -224,8 +224,8 @@ that an account or wallet has been withdrawn. OPAP/1 imposes no universal
 maximum validity interval. Publishers SHOULD choose an interval compatible
 with protected re-signing, and payer applications MAY require a shorter
 interval for high-value, recurring, or unattended payments. Longer intervals
-extend replay exposure for a first-time resolver and for a returning resolver
-that has not observed a later revision.
+extend replay exposure when no applicable revision evidence is supplied and
+when supplied evidence does not contain a later revision.
 
 ### 6.2 Payment options
 
@@ -384,23 +384,30 @@ when adapter verification confirms that exact result, as required above.
 Origin binding and previously established continuity are orthogonal:
 
 ```text
-binding:    "https" | "dnssec"
-continuity: "none" | "first-use" | "bound"
+prior evidence: "none" | "available" | "unavailable"
+binding:        "https" | "dnssec"
+continuity:     "none" | "first-use" | "bound"
+history:        "none" | "available"
 ```
 
 - `https/none` is an unsigned HTTPS publication.
 - `https/first-use` is a valid proof under an origin key learned from insecure
-  DNS when this device has no exact-host pin.
-- `https/bound` is a valid proof under the exact-host pin or its authenticated
-  successor, with integrity-protected history available.
+  DNS when the caller supplied no applicable host evidence.
+- `https/bound` is a valid proof under the origin key or authenticated
+  successor in caller-supplied host evidence.
 - `dnssec/first-use` is the equivalent first successful proof with secure
   DNSSEC evidence.
-- `dnssec/bound` combines current secure DNSSEC evidence with the pinned
+- `dnssec/bound` combines current secure DNSSEC evidence with the supplied
   lineage.
 
-An application MUST display both values and the absence of continuity history.
-It MAY require `bound` for high-value, recurring, or unattended payments. It
-MUST NOT describe `https/first-use` as protected against origin takeover.
+`history` reports whether an applicable prior OPID entry was compared. It is
+independent of `continuity`: an OPID first encountered on a hostname with
+supplied host evidence can be `bound` with history `none`.
+
+An application MUST display binding, continuity, and the absence of applicable
+OPID history. It MAY require `bound` and history `available` for high-value,
+recurring, or unattended payments. It MUST NOT describe `https/first-use` or
+history `none` as protected against the corresponding cross-resolution attack.
 
 ### 7.1 Origin trust record
 
@@ -470,38 +477,49 @@ authenticated by every transition. A changed or missing commitment is
 key offline, store it independently, and never place it on the ordinary
 signing machine.
 
-### 7.3 Exact-host continuity algorithm
+### 7.3 Exact-host continuity transition
 
-After the first successful origin-key proof, a resolver atomically creates an
-exact-host pin containing the hostname, current epoch and key, immutable
-recovery commitment, any authenticated next key, and retired-key
-fingerprints. The lookup key MUST be the exact canonical hostname; a public-key
-index MAY assist but MUST NOT replace it.
+Exact-host continuity is a pure comparison over current validated trust
+material and the applicable host entry in caller-supplied prior evidence. The
+resolver MUST NOT open, own, or write a continuity store. The host lookup key
+is the exact canonical hostname; a public-key index cannot substitute for it.
 
-With no existing pin, only a proof under the current `ed25519` key establishes
-`first-use`; the `next` key is not trusted merely because it appears in DNS.
-This applies identically to secure and insecure TXT records. An unsigned HTTPS
-publication creates no pin and has continuity `none`.
+With prior-evidence state `none`, or with no entry for a newly encountered
+hostname in an `available` bundle, only a proof under the current `ed25519` key
+establishes `first-use`; the `next` key is not trusted merely because it appears
+in DNS. This applies identically to secure and insecure TXT records. An
+unsigned HTTPS publication has continuity `none`.
 
-With an existing pin, a resolver MUST:
+With an applicable origin-key host entry, the evaluator MUST:
 
-1. accept the pinned epoch and key only when `rec` still matches;
-2. authenticate `next` before recording it as the one permitted successor;
-3. advance exactly one epoch only when the new key was previously authenticated
-   as `next`, or when valid one-step `previous` evidence authenticates it from
-   the pinned key;
-4. retire the replaced key and reject every later reuse;
-5. reject a lower epoch with `identity_key_rollback`, a same-epoch replacement
-   or other unauthenticated replacement with `identity_key_changed`, and an
-   invalid transition, changed commitment, jump of more than one epoch, or
-   unapproved-next proof with `identity_key_transition_invalid`.
+1. accept the supplied epoch and key only when `rec` still matches;
+2. authenticate `next` before including it as the one permitted successor in
+   proposed evidence;
+3. advance exactly one epoch only when the new key was authenticated as
+   `authenticated_next` in the supplied evidence, or when valid one-step
+   `previous` evidence authenticates it from the supplied current key;
+4. add the replaced key fingerprint to `retired_key_fingerprints` in proposed
+   evidence and reject every later reuse;
+5. reject a lower epoch or retired-key reuse with `identity_key_rollback`, a
+   same-epoch replacement or other unauthenticated replacement with
+   `identity_key_changed`, and an invalid transition, changed commitment, jump
+   of more than one epoch, or unapproved-next proof with
+   `identity_key_transition_invalid`.
+
+Prior-evidence state `unavailable` stops evaluation with
+`trust_history_unavailable`. A caller that expected an entry but could not load
+or validate it MUST use `unavailable`; it MUST NOT omit the entry or translate
+the failure to `none`.
 
 DNSSEC validity determines `binding`; it never authorizes key replacement.
 Missing more than one retained transition is a recovery event, not permission
 to trust the current key. Until recovery authorization is specified,
 unauthenticated replacement remains blocked. A missing trust record after a
-pin exists is also a continuity failure and MUST NOT fall back to unsigned
-HTTPS. DNSSEC-bogus is always `dnssec_bogus`.
+supplied origin-key entry is `identity_key_changed` and MUST NOT fall back to
+unsigned HTTPS. DNSSEC-bogus is always `dnssec_bogus`.
+
+On success, the evaluator includes a deterministic host entry in proposed next
+evidence. It does not persist or implicitly accept that proposal.
 
 ### 7.4 Record proof
 
@@ -518,27 +536,86 @@ by section 7.3. A missing or invalid required proof is
 `record_proof_invalid`; proof, transition, freshness, or history failure MUST
 NOT trigger a weaker fallback.
 
-## 8. Normative security history and target continuity
+## 8. Portable continuity evidence and target continuity
 
-Resolvers maintain two integrity-protected stores. The exact-host pin is
-defined in section 7.3. Per canonical OPID, history contains the highest
-verified revision, fingerprint at that revision, previously accepted canonical
-target fingerprint, and highest binding evidence.
+Core OPAP owns no storage. It defines a portable evidence envelope,
+deterministic comparison rules, proposed next evidence, and reason codes.
+Callers decide whether and how to persist, synchronize, encrypt, discard, or
+decline to provide evidence. Storage availability, concurrency, backup, and
+commit atomicity are application responsibilities and are not resolver
+conformance requirements.
 
-A lower revision is `record_rollback`. Reusing the highest revision with a
-different exact-byte fingerprint is `record_revision_conflict`. The same
-revision with the same bytes is permitted until expiry. A higher revision is
-accepted independently of whether its payment target changed.
+Given identical current publication bytes, trust material, current time, payer
+policy, and prior evidence, conforming evaluators MUST produce the same
+continuity result, protocol reason code, and proposed next evidence.
 
-Detectable corruption, load failure, or save failure is
-`trust_history_unavailable` and blocks resolution. A resolver MUST NOT silently
-turn failed or deleted state into first use. A genuinely clean device cannot
-always be distinguished from deleted state, so UI MUST say that the device has
-no continuity history. Cross-device continuity requires explicit export,
-backup, or authenticated sync. Each read/transition/write update across both
-stores MUST be atomic.
+### 8.1 Prior-evidence input and portable schema
 
-### 8.1 Canonical target projection
+Each resolution has exactly one logical prior-evidence input:
+
+- `none`: the caller has no prior evidence for this resolution. Current
+  publication validity is evaluated, but no cross-resolution protection is
+  claimed.
+- `available`: the caller supplies a validated evidence bundle. Every
+  applicable host and OPID entry triggers the comparisons in sections 7.3,
+  8.2, and 8.3. An omitted entry means that canonical identity was not
+  previously evidenced by this bundle.
+- `unavailable`: the caller expected evidence but could not load or validate
+  it. Resolution fails closed with `trust_history_unavailable`.
+
+A clean process, command-line tool, private session, or deliberately stateless
+caller can conform using `none`; provisioning durable storage is not required.
+An application that promised continuity MUST NOT convert missing, corrupt, or
+unverifiable expected evidence to `none`.
+
+The normative JSON representation is
+`schema/open-payment-continuity-evidence-v1.schema.json`. Its envelope contains
+`version: 1`, `protocol: "OPAP/1"`, and `state`. Only `available` carries an
+`evidence` bundle. That bundle contains:
+
+- `hosts`, unique entries sorted by ascending UTF-8 bytes of exact canonical
+  `hostname`. An unsigned entry carries `highest_binding` and
+  `authentication: "unsigned"`. An origin-key entry additionally carries the
+  current `epoch`, raw `public_key`, its `key_fingerprint`, immutable
+  `recovery_commitment`, sorted retired-key fingerprints, and any
+  `authenticated_next` epoch, key, fingerprint, and transition signature.
+- `opids`, unique entries sorted by ascending UTF-8 bytes of canonical `opid`.
+  Each carries its exact `hostname`, highest accepted `revision`, exact-byte
+  `record_fingerprint`, complete canonical `target_projection` and
+  `target_fingerprint`, `highest_binding`, and strongest accepted
+  `authentication`.
+
+The key fingerprint is `sha256:` followed by lowercase hexadecimal SHA-256 of
+the raw 32-byte Ed25519 public key. Record and target fingerprints use the same
+prefix and hexadecimal representation; their respective inputs remain the
+exact response body bytes and canonical target-projection bytes.
+
+Before using an `available` envelope, an evaluator MUST validate the schema,
+canonical OPIDs and hostname correspondence, deterministic ordering and
+uniqueness, key and target fingerprints, transition signatures, and that a
+current key is not in its retired set. Failure is
+`trust_history_unavailable`, not first use.
+
+An input bundle can contain only entries applicable to the requested
+resolution. Proposed next evidence MUST contain one entry for every distinct
+resolved hostname and canonical OPID, in the deterministic order above. Thus a
+payment graph produces one portable bundle without prescribing a database,
+transaction engine, synchronization service, or storage topology.
+
+### 8.2 Revision evaluation
+
+With an applicable OPID entry in `available` prior evidence, a lower revision
+is `record_rollback`. Reusing its highest revision with a different exact-byte
+fingerprint is `record_revision_conflict`. The same revision with the same
+bytes is permitted until expiry. A higher revision passes revision comparison
+independently of whether its payment target changed.
+
+With prior evidence `none`, or no applicable OPID entry, the evaluator validates
+the current revision's syntax and authenticated publication metadata but MUST
+NOT claim cross-resolution rollback detection. Every successful node result
+exposes the current revision and reports history `none` or `available`.
+
+### 8.3 Canonical target projection
 
 The target projection contains recipient-affecting values only and is encoded
 as canonical JSON with object keys lexicographically sorted, no insignificant
@@ -558,8 +635,8 @@ whitespace, and arrays handled as follows:
 
   `terminal_opid` is the OPID containing the selected option after delegation.
   Hexadecimal EVM addresses and `config_id` values in every projection are
-  lowercase. The target OPID's own complete projection and history are also
-  computed and stored independently;
+  lowercase. The target OPID's own complete projection and evidence entry are
+  also computed independently;
 - a delegated source OPID: the resolved terminal OPID and that terminal
   projection.
 
@@ -567,33 +644,61 @@ Set entries are sorted by their own canonical JSON bytes. The canonical target
 fingerprint is `sha256:` followed by lowercase hexadecimal SHA-256 of the UTF-8
 canonical JSON bytes.
 
-When this differs from the previously accepted value for any OPID in the
-resolution, normal resolution stops with `payment_target_changed`. Continuing
-requires a separate confirmation that shows old and proposed targets. It MUST
-NOT overwrite key pins or target history as part of ordinary failed
-resolution. Recovery from `identity_key_changed` is a separate action showing
-old and proposed key fingerprints; OPAP/1 does not authorize it.
+With an applicable OPID entry, a different target fingerprint stops normal
+resolution with `payment_target_changed`. With no applicable entry, the target
+is currently valid but has no cross-resolution target-change protection.
+
+### 8.4 Proposed next evidence and confirmation
+
+Every successful resolution returns deterministic proposed next evidence
+alongside its result. The proposal advances accepted epochs and revisions,
+preserves the strongest accepted binding and authentication evidence, retires
+replaced keys, and contains the current target projections. The resolver MUST
+NOT persist or implicitly accept it.
+
+Continuity comparisons follow proposed-evidence order: hosts by canonical
+hostname, then OPIDs by canonical OPID. For one OPID, revision rollback is
+checked before same-revision byte conflict, which is checked before target
+change. Evaluation stops at the first reason. This ordering is normative when
+multiple current inputs would otherwise fail.
+
+Ordinary failed resolution returns no replacement evidence. A change requiring
+confirmation—`identity_key_changed` or `payment_target_changed`—returns the
+reason, old supplied evidence, and proposed evidence as separate values.
+Continuing requires application confirmation that shows the old and proposed
+keys or targets. OPAP/1 does not authorize the change or commit the proposal.
+Any later evidence commit is an explicit application action and is neither
+payment execution nor custody.
 
 ## 9. Resolver algorithm
 
-For an OPID supplied by a payer or explicitly selected by the payer:
+For an OPID supplied by a payer or explicitly selected by the payer, current
+time and trust material, payer policy, and one prior-evidence input:
 
-1. Parse and canonicalise the HTTPS URL; otherwise stop with `invalid_opid`.
-2. Derive the canonical record URL from section 4.
-3. Fetch only that URL using section 5.
-4. Validate transport, JSON, schema, and exact `id` equality.
-5. Enforce `issued_at`, `expires_at`, and per-OPID revision history.
-6. Query the optional origin trust record; enforce its exact-host pin and proof.
+1. If prior evidence is `unavailable`, stop with
+   `trust_history_unavailable`; validate an `available` envelope as section 8.1.
+2. Parse and canonicalise the HTTPS URL; otherwise stop with `invalid_opid`.
+3. Derive the canonical record URL from section 4.
+4. Fetch only that URL using section 5.
+5. Validate transport, JSON, schema, exact `id` equality, `issued_at`, and
+   `expires_at`.
+6. Query the optional origin trust record; validate its proof and apply the
+   exact-host transition in section 7.3 to supplied host evidence when present.
 7. Resolve options, delegation, and OPID-targeted allocations within the
    applicable bounds, independently of any concrete payment executor.
-8. Compare and atomically persist key, revision, binding, and target history.
+8. Apply revision and target comparisons to supplied OPID evidence. Do not
+   mutate the input or persist a result.
 9. Produce an immutable execution plan containing hostname, key fingerprint and
    epoch where applicable, binding, continuity, record revision and expiry,
    exact-byte record fingerprint, and final options. For a payment graph this
    evidence is included for the root and every resolved OPID in deterministic
    traversal order, together with each target projection, selected option, and
    compiled terminal allocation.
-10. Immediately before execution, re-resolve the complete graph and revalidate
+10. Return the plan plus deterministic proposed next evidence from section
+    8.4. The caller may explicitly commit that proposal after accepting the
+    resolution.
+11. Immediately before execution, re-resolve the complete graph using the same
+    prior-evidence input and revalidate
     every record and the adapter configuration. Compare graph node and edge
     identity, trust results, target projections, selected options, and compiled
     allocations with the immutable plan. Stop with `execution_changed` on any
@@ -608,6 +713,8 @@ ordinary URL, or send a speculative lookup without payer intent.
 `payment_target_changed` is an across-resolution history decision.
 `execution_changed` is a within-payment review-versus-execution decision. They
 are distinct and non-overlapping; a flow MAY encounter either or both.
+Immediate review-to-execution re-resolution does not create or commit
+cross-resolution evidence.
 
 Graph resolution and plan compilation MUST produce data, not perform payment
 execution. A concrete executor consumes only a reviewed, immutable, immediately
@@ -623,20 +730,27 @@ Plan schema at `schema/open-payment-execution-plan-v1.schema.json`. The plan
 contains:
 
 - `version`, `protocol`, and the payer-supplied canonical `root_opid`;
+- the successful input state as `prior_evidence`, which is `none` or
+  `available` (`unavailable` cannot produce a plan);
 - a graph whose evidence nodes are in deterministic depth-first traversal order
   and whose edges are in deterministic encounter order; and
 - exactly one `execution` object for one external executor invocation.
 
 Each evidence node contains the canonical OPID, hostname, derived record URL,
 record revision and expiry, exact-byte record fingerprint, binding, continuity,
-origin-key fingerprint and epoch where applicable, complete target projection
-and fingerprint, and the selected option projection where that node supplies
-an executable option. Graph OPIDs MUST be unique. A node with continuity
-`none` MUST omit `origin_key`; a node with continuity `first-use` or `bound`
-MUST include it.
+applicable-history status, origin-key fingerprint and epoch where applicable,
+complete target projection and fingerprint, and the selected option projection
+where that node supplies an executable option. Graph OPIDs MUST be unique. A
+node with continuity `none` MUST omit `origin_key`; a node with continuity
+`first-use` or `bound` MUST include it. History `available` requires input
+state `available`; continuity `bound` requires applicable host evidence but
+does not require prior OPID history.
+
+Proposed next evidence is returned alongside the plan using the section 8.1
+schema. It is not embedded in the plan and is not part of the plan fingerprint.
 
 Every EVM address and `config_id` in a plan is lowercase. The plan is encoded
-as canonical JSON using the rules in section 8.1. Its plan fingerprint is
+as canonical JSON using the rules in section 8.3. Its plan fingerprint is
 `sha256:` followed by lowercase hexadecimal SHA-256 of those UTF-8 canonical
 JSON bytes. The fingerprint is carried alongside the immutable plan and is not
 embedded in the hashed object.
@@ -645,7 +759,7 @@ The execution-plan schema intentionally leaves `target_projection` and
 `option_projection` structurally open so namespaced Payment Options can retain
 their complete recipient-affecting data. Schema validation alone does not
 establish projection correctness. A conforming resolver MUST construct both
-objects from already validated records using section 8.1 and MUST verify each
+objects from already validated records using section 8.3 and MUST verify each
 `target_fingerprint` against the canonical target projection.
 
 Amount and economic context remain application data under section 1. A payer
@@ -685,6 +799,15 @@ after target compilation uses `split_recipient_collision`. A graph hostname
 resolving to a forbidden network destination uses
 `target_address_forbidden`.
 
+`trust_history_unavailable` applies only when the caller reports unavailable
+expected evidence or an `available` envelope fails validation.
+`identity_key_changed`, `identity_key_rollback`,
+`identity_key_transition_invalid`, `record_rollback`,
+`record_revision_conflict`, and `payment_target_changed` apply when the
+corresponding supplied evidence makes the comparison possible. They remain
+portable protocol results; application policy and storage choices do not
+redefine them.
+
 ## 10. Publisher model
 
 A provider may serve a single generic route:
@@ -704,12 +827,12 @@ to expose the root well-known path cannot publish OPAP Records for that origin.
 
 Where a provider holds the origin key on a recipient's behalf, that provider
 controls publication and the payment target for every OPID under that
-hostname. `payment_target_changed` protects returning payers against an
-undisclosed change; it does not itself give the recipient control of the
-signing key. Hosted-publication providers SHOULD disclose whether the origin
-key is provider-held or recipient-held. Publisher tooling SHOULD make this
-distinction visible when an identity is created. This is an operational
-disclosure, not a self-asserted record field.
+hostname. `payment_target_changed` protects callers that supply applicable
+OPID evidence against an undisclosed change; it does not itself give the
+recipient control of the signing key. Hosted-publication providers SHOULD
+disclose whether the origin key is provider-held or recipient-held. Publisher
+tooling SHOULD make this distinction visible when an identity is created. This
+is an operational disclosure, not a self-asserted record field.
 
 ## 11. Security, privacy, and limitations
 
@@ -724,14 +847,15 @@ a product or invoice identifier; use an opaque URL path when that is not
 acceptable. DNSSEC is optional because it adds operator responsibility, not
 because it changes the public nature of lookup.
 
-Continuity protects previously established exact-host trust; first use can
-still be compromised. Takeover fails closed for a continuity-bound payer, but
-denial of service, loss of the hostname, and loss of reachability remain
-possible. OPAP/1 does not preserve an address after its hostname is lost.
-Compromise of the ordinary signing key remains authoritative until a future
-recovery mechanism uses `rec`. Revision history rejects values below the
-highest observed, but the exact highest-observed publication can be replayed
-until its expiry.
+When suitable `available` prior evidence is supplied, continuity protects
+previously established exact-host trust; first use and resolutions with
+`none` can still be compromised. Takeover fails closed for a
+continuity-bound payer, but denial of service, loss of the hostname, and loss
+of reachability remain possible. OPAP/1 does not preserve an address after its
+hostname is lost. Compromise of the ordinary signing key remains authoritative
+until a future recovery mechanism uses `rec`. Supplied revision evidence
+rejects values below its highest accepted revision, but that exact publication
+can be replayed until expiry.
 
 **OPAP/1 converts silent substitution into visible failure for
 continuity-bound payers. It does not keep a payment address reachable.**
@@ -740,14 +864,14 @@ continuity-bound payers. It does not keep a payment address reachable.**
 |---|---|---|
 | Web server compromised; signing key held offline | No — bounded replay only | No — denial of service remains possible |
 | Web server compromised; signing key co-located | **Yes** | No |
-| Hostname lost or repossessed; payer continuity-bound | No — `identity_key_changed` | **No** |
-| Hostname lost or repossessed; payer at first use | **Yes** | **No** |
+| Hostname lost or repossessed; suitable prior evidence supplied | No — `identity_key_changed` | **No** |
+| Hostname lost or repossessed; prior evidence `none` | **Yes** | **No** |
 
 The first row assumes a signed publication, a genuinely isolated key, and a
-payer that has observed a sufficiently recent revision. At continuity `none`,
-serving-environment compromise is total. A stolen co-located key can authorize
-malicious records and transitions. A resolver whose highest observed revision
-is R accepts an exact replay of R until it expires.
+caller that supplied evidence for a sufficiently recent revision. With prior
+evidence `none`, serving-environment compromise is total. A stolen co-located
+key can authorize malicious records and transitions. An evaluator supplied
+with highest accepted revision R accepts an exact replay of R until it expires.
 
 ### 11.1 Independent identity commitment
 
@@ -770,8 +894,9 @@ controls references published there.
   require separate migration confirmation, and provide discovery for payers
   without cached state. Origin-wide identity is not a substitute because
   takeover detection begins at the exact hostname.
-- **First-use assurance.** A payer without history sees only the current
-  publication. A future fail-closed `opk` reference can help only when it
+- **First-use assurance.** A payer using `none` or without applicable evidence
+  sees only the current publication. A future fail-closed `opk` reference can
+  help only when it
   reaches the payer independently. A resolver that cannot verify such a future
   reference must reject it, never silently degrade it; publishers should not
   place one on long-lived printed or public artifacts before support is broad.
@@ -786,6 +911,9 @@ controls references published there.
 - **Publisher:** controls the OPID hostname and publishes its records.
 - **Provider:** optionally operates the publisher service for many publishers
   or resources; it is not made a payment intermediary by OPAP.
-- **Resolver:** validates and resolves an OPID into an execution plan.
-- **Payer application:** obtains payer intent, displays the plan, and may hand
-  it to a bank or wallet. It is responsible for actual payment execution.
+- **Resolver:** validates and resolves an OPID into an execution plan and
+  proposed next evidence without owning storage.
+- **Payer application:** obtains payer intent, supplies or declines prior
+  evidence, displays the plan, may explicitly retain proposed evidence, and
+  may hand the plan to a bank or wallet. It owns any evidence storage and is
+  responsible for actual payment execution.

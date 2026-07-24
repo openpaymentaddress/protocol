@@ -18,7 +18,7 @@
       ],
       "expectedSelectedOptionIndex": 1,
       "expectedPlan": "../execution-plans/compatible-opid-target.json",
-      "expectedPlanFingerprint": "sha256:d825b96ee8c6f776195820786ffed5a15013f794f8f6c6257d67ab1b41b393a5",
+      "expectedPlanFingerprint": "sha256:f6f08bf0a23d5d3cb7d0ec251b188f6b25c1286207b801bfeb55721834527e36",
       "expectedAllocations": [
         { "recipient": "0x3333333333333333333333333333333333333333", "share_ppm": 600000 },
         { "recipient": "0x4444444444444444444444444444444444444444", "share_ppm": 400000 }

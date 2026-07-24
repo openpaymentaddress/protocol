@@ -6,11 +6,12 @@
   "$comment": "The plan contains recipient-affecting protocol data and resolution evidence only. Amount, order, invoice, tax, retry, settlement-status and other application workflow state are intentionally excluded.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["version", "protocol", "root_opid", "graph", "execution"],
+  "required": ["version", "protocol", "root_opid", "prior_evidence", "graph", "execution"],
   "properties": {
     "version": { "const": 1 },
     "protocol": { "const": "OPAP/1" },
     "root_opid": { "$ref": "#/$defs/opid" },
+    "prior_evidence": { "enum": ["none", "available"] },
     "graph": { "$ref": "#/$defs/resolutionGraph" },
     "execution": {
       "oneOf": [
@@ -21,6 +22,33 @@
       ]
     }
   },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "prior_evidence": { "const": "none" } },
+        "required": ["prior_evidence"]
+      },
+      "then": {
+        "properties": {
+          "graph": {
+            "type": "object",
+            "properties": {
+              "nodes": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "continuity": { "enum": ["none", "first-use"] },
+                    "history": { "const": "none" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
   "$defs": {
     "utcSecond": {
       "type": "string",
@@ -103,6 +131,7 @@
         "record_fingerprint",
         "binding",
         "continuity",
+        "history",
         "target_projection",
         "target_fingerprint"
       ],
@@ -122,6 +151,7 @@
         "record_fingerprint": { "$ref": "#/$defs/fingerprint" },
         "binding": { "enum": ["https", "dnssec"] },
         "continuity": { "enum": ["none", "first-use", "bound"] },
+        "history": { "enum": ["none", "available"] },
         "origin_key": { "$ref": "#/$defs/originKey" },
         "target_projection": { "type": "object" },
         "target_fingerprint": { "$ref": "#/$defs/fingerprint" },

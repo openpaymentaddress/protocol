@@ -1,129 +1,116 @@
-# How to publish an OPID on your domain with Cloudflare Pages
+# Publish an OPID with Cloudflare Pages
 
-This is a non-normative, provider-specific deployment guide for publishing one
-static OPAP/1 Record. The [OPAP/1 specification](../specification/opap-1.md)
-and schemas remain authoritative.
+This non-normative guide publishes one static OPAP/1 Record. The
+[specification](../specification/opap-1.md) and schemas are authoritative.
 
-The procedure deliberately uses a separate, minimal Cloudflare Pages project
-with no Pages Functions or `_worker.js`.
+## Trust profiles
+
+| Profile | Origin proof | DNSSEC | Resolver result |
+| --- | --- | --- | --- |
+| Minimal | No | No | `https/none`; valid, but no key binding or continuity |
+| Signed | Yes | No | `https/first-use` or `https/bound` |
+| Recommended | Yes | Yes | `dnssec/first-use` or `dnssec/bound` |
+
+`first-use` means the caller supplied no applicable host evidence; `bound`
+means it supplied `available` evidence for the authenticated key lineage.
+Publishing does not require the resolver to own or persist that evidence.
+
+Follow every step for the recommended profile. For minimal, skip sections 3
+and 5; for signed, skip section 5. An unsigned OPID is valid, but the resolver
+must report that DNSSEC key binding is absent.
 
 ## Agent contract
 
-An agent following this guide must obtain and confirm these inputs before
-making public changes:
+Before public changes, obtain and confirm:
 
-- the domain or subdomain the user controls;
-- the exact canonical HTTPS OPID;
-- the exact payment destination, including recipient name and IBAN for SEPA;
-- the Cloudflare account and registrar that are in scope;
-- whether replacing the current website on that hostname is intended.
+- the controlled domain/subdomain and canonical HTTPS OPID;
+- the exact public payment destination, including SEPA name and IBAN;
+- the Cloudflare account and registrar in scope; and
+- whether replacing the website on that hostname is intended.
 
-The payment record and its destination data are public. Never infer, alter, or
-publish payment details that the user has not explicitly confirmed.
+Never infer payment data. Never expose, commit, upload, or deploy a private
+key. Preserve all unrelated DNS records.
 
-The procedure is complete only when:
+Recommended-profile completion requires:
 
-1. Cloudflare is authoritative for the DNS zone;
-2. the Pages custom domain is `Active`;
-3. the derived record URL returns `200` without a redirect;
-4. all five required OPAP transport headers have the exact required values;
-5. the returned JSON contains the exact canonical OPID and confirmed payment
-   destination; and
-6. an independent OPAP resolver accepts the OPID.
+1. Cloudflare is authoritative and Pages reports the custom domain `Active`;
+2. the exact record URL returns `200` without redirect, with valid bytes and
+   headers;
+3. `_opap.<hostname>` returns the intended TXT record with DNSSEC `AD=true`;
+4. the parent zone publishes Cloudflare's DS; and
+5. an independent resolver reports `Payment address verified` and
+   `DNSSEC key binding verified`.
 
-## 1. Move the domain's authoritative DNS to Cloudflare
+## 1. Make Cloudflare authoritative
 
-Skip this section only if the domain already has status `Active` in the
-intended Cloudflare account.
+Skip this section when the zone is already `Active` in the intended account.
+Nameserver changes can interrupt web and mail service; do not proceed with
+missing records.
 
-Changing nameservers can interrupt the website, email, and domain verification.
-Before changing anything:
-
-1. Export or capture every current DNS record.
-2. Identify all `MX`, mail-related `TXT`, DKIM, DMARC, verification, `CAA`, and
-   non-web records.
-3. Add the apex domain to Cloudflare with **Onboard a domain** and import or
-   recreate all required records.
-4. Compare the Cloudflare DNS record set with the previous authoritative
-   provider. Do not proceed while required records are missing.
-5. If DNSSEC is enabled at the registrar, disable it before changing
-   nameservers. Re-enable DNSSEC through Cloudflare only after the zone is
-   active and resolving correctly.
-6. At the registrar, replace the existing authoritative nameservers with the
-   two nameservers assigned by Cloudflare.
-7. Wait until Cloudflare reports the zone as `Active`.
-
-Verify from an independent resolver:
+1. Capture the complete old zone, especially `MX`, SPF, DKIM, DMARC,
+   verification, `CAA`, and other non-web records.
+2. Add the apex domain to Cloudflare and recreate/verify every required record.
+3. If DNSSEC is active at the old provider, disable its registrar DS before
+   changing nameservers.
+4. At the registrar, replace the nameservers with Cloudflare's assigned pair.
+5. Wait for Cloudflare status `Active` and verify independently:
 
 ```text
-# macOS or Linux
+# macOS/Linux
 dig NS example.com @1.1.1.1
 
 # Windows
 nslookup -type=ns example.com 1.1.1.1
 ```
 
-The result must contain the two Cloudflare-assigned nameservers. Cloudflare's
-[full DNS setup guide](https://developers.cloudflare.com/dns/zone-setups/full-setup/setup/)
-documents the current dashboard and registrar procedure.
+The result must contain Cloudflare's nameservers. See
+[Cloudflare full setup](https://developers.cloudflare.com/dns/zone-setups/full-setup/setup/).
 
-## 2. Choose and canonicalise the OPID
+## 2. Build the static record
 
-Use either the root URL:
+Choose a canonical OPID:
 
 ```text
 https://example.com/
-```
-
-or a canonical path:
-
-```text
 https://example.com/donate
 ```
 
-The URL must use HTTPS, contain no port, credentials, query, or fragment, and
-must follow the canonical path rules in
+It must use HTTPS, have no credentials, port, query, or fragment, and satisfy
 [OPAP/1 section 3](../specification/opap-1.md#3-opid-syntax-and-canonical-form).
-The root slash is part of the canonical OPID.
+The root slash is significant. If the hostname already serves a website, add
+the record to that deployment or use a dedicated hostname such as
+`pay.example.com`; do not replace the site without confirmation.
 
-If the apex hostname already serves a website that must remain online, do not
-replace it with this minimal Pages project. Either publish the record files
-from that website's existing deployment or use a dedicated hostname such as
-`pay.example.com`, making the OPID `https://pay.example.com/`.
-
-Derive the record path key by base64url-encoding the UTF-8 bytes of the
-canonical URL path, including its leading slash and without padding:
+Base64url-encode the UTF-8 URL path, including its leading slash and without
+padding:
 
 ```text
-node -e "const u=new URL(process.argv[1]); console.log(Buffer.from(u.pathname,'utf8').toString('base64url'))" "https://example.com/"
+node -e "const u=new URL(process.argv[1]);console.log(Buffer.from(u.pathname).toString('base64url'))" "https://example.com/"
 ```
 
-For the root path `/`, the result is `Lw`. The corresponding record URL is:
+For `/`, the key is `Lw` and the record URL is:
 
 ```text
 https://example.com/.well-known/open-payment/record/Lw
 ```
 
-For a non-root OPID, use the generated key verbatim as the filename.
+For another path, use the printed key verbatim as the record filename.
 
-## 3. Create the minimal static publication
-
-Create this directory structure:
+Use a work directory whose key material is outside the deployable `site`
+directory:
 
 ```text
-opid-site/
-├── index.html
-├── _headers
-└── .well-known/
-    └── open-payment/
-        └── record/
-            └── Lw
+opid-work/
+├── origin-epoch-1.pk8
+├── origin-epoch-1.pub
+├── make-proof.mjs
+└── site/
+    ├── index.html
+    ├── _headers
+    └── .well-known/open-payment/record/Lw
 ```
 
-Replace `Lw` with the path key derived in the previous section when the OPID
-does not use `/`.
-
-`index.html` may be minimal:
+`site/index.html` may be:
 
 ```html
 <!doctype html>
@@ -132,8 +119,7 @@ does not use `/`.
 <p>This domain publishes an Open Payment Address.</p>
 ```
 
-Create the extensionless record file with UTF-8 JSON and no byte-order mark.
-For a new SEPA OPID, use this shape:
+Create the extensionless record as UTF-8 JSON without a byte-order mark:
 
 ```json
 {
@@ -145,32 +131,23 @@ For a new SEPA OPID, use this shape:
   "name": "Example recipient",
   "payment": {
     "type": "options",
-    "options": [
-      {
-        "type": "sepa",
-        "currency": "EUR",
-        "name": "Example recipient",
-        "iban": "NL91ABNA0417164300"
-      }
-    ]
+    "options": [{
+      "type": "sepa",
+      "currency": "EUR",
+      "name": "Example recipient",
+      "iban": "NL91ABNA0417164300"
+    }]
   }
 }
 ```
 
-Before deployment, replace every example value:
+Replace every example. `id` must equal the OPID exactly; timestamps must be real
+UTC seconds with `expires_at > issued_at`; the confirmed IBAN must be uppercase,
+unspaced, and checksum-valid. Use `revision: 1` only for a new OPID. Every later
+publication, including freshness-only changes, needs a strictly higher revision.
+OPAP/1 sets no universal maximum validity interval; choose one you can renew.
 
-- `id` must exactly equal the canonical OPID;
-- `revision` is `1` only for a never-before-published OPID;
-- timestamps must be real UTC timestamps at exact-second precision;
-- `expires_at` must be later than `issued_at`;
-- `name` and `iban` must be the confirmed public destination;
-- the IBAN must be uppercase, contain no spaces, and pass its checksum.
-
-OPAP/1 has no universal maximum validity interval. Choose an expiry that can be
-renewed operationally. Every later publication for the same OPID, including a
-freshness-only change, must use a strictly higher revision.
-
-Create `_headers` with exactly:
+Create `site/_headers`:
 
 ```text
 /.well-known/open-payment/record/*
@@ -181,163 +158,185 @@ Create `_headers` with exactly:
   Content-Type: application/opap+json
 ```
 
-`OPAP-Proof` must appear in `Access-Control-Expose-Headers` even when the record
-does not carry an `OPAP-Proof` response header.
+Do not redirect the record route. Do not use Pages Functions or `_worker.js`
+for this static project: `_headers` applies only to static assets; a
+function-based publisher must set these headers in code. Keep `OPAP-Proof` in
+the exposed-header list even for an unsigned record. See
+[Pages headers](https://developers.cloudflare.com/pages/configuration/headers/).
 
-Do not add redirects for the record path. Do not add Pages Functions or
-`_worker.js` to this minimal project. Cloudflare applies `_headers` to static
-assets, but not to responses generated by Pages Functions; a function-based
-publisher must set the required headers in its own response code. See
-Cloudflare's [_headers documentation](https://developers.cloudflare.com/pages/configuration/headers/).
+## 3. Sign the exact record bytes
 
-## 4. Create and deploy the Cloudflare Pages project
+Generate one Ed25519 key pair locally from `opid-work`:
 
-Node.js and npm are required. Authenticate Wrangler:
+```text
+node -e "const{generateKeyPairSync}=require('node:crypto'),{writeFileSync}=require('node:fs'),k=generateKeyPairSync('ed25519');writeFileSync('origin-epoch-1.pk8',k.privateKey.export({format:'der',type:'pkcs8'}),{mode:0o600});writeFileSync('origin-epoch-1.pub',k.publicKey.export({format:'der',type:'spki'}).subarray(-32).toString('base64url')+'\n')"
+```
+
+Restrict `origin-epoch-1.pk8` to the current user (`chmod 600` on Unix; remove
+inheritance and other principals from its ACL on Windows). Back it up securely.
+`rec=none` below deliberately provides no OPAP recovery: losing or replacing
+this key produces `identity_key_changed` for callers that supply applicable
+host evidence. A caller using explicit `none` has no such takeover protection.
+
+Publish this Cloudflare DNS record, replacing `<public-key>` with the contents
+of `origin-epoch-1.pub`:
+
+```text
+Type:    TXT
+Name:    _opap                    # apex; use _opap.pay for pay.example.com
+Content: v=opap1;epoch=1;ed25519=<public-key>;rec=none
+TTL:     300
+```
+
+Create `make-proof.mjs` outside `site`:
+
+```js
+import { createHash, createPrivateKey, sign } from "node:crypto";
+import { readFileSync } from "node:fs";
+
+const [recordPath, keyPath] = process.argv.slice(2);
+if (!recordPath || !keyPath) throw new Error("record and key paths required");
+const body = readFileSync(recordPath);
+const id = JSON.parse(body.toString("utf8")).id;
+const hash = createHash("sha256").update(body).digest("hex");
+const key = createPrivateKey({
+  key: readFileSync(keyPath), format: "der", type: "pkcs8"
+});
+const message = Buffer.from(`OPAP/1\n${id}\n${hash}`);
+console.log(`v=1;sig=${sign(null, message, key).toString("base64url")}`);
+```
+
+Run it against the final, exact record bytes:
+
+```text
+node make-proof.mjs site/.well-known/open-payment/record/Lw origin-epoch-1.pk8
+```
+
+Append the printed value to `site/_headers` for that exact record:
+
+```text
+/.well-known/open-payment/record/Lw
+  OPAP-Proof: v=1;sig=<signature>
+```
+
+Any byte change requires a new proof. Never deploy `opid-work` itself.
+
+## 4. Deploy and attach Pages
+
+From `opid-work`, authenticate Wrangler and create a Direct Upload project:
 
 ```text
 npx wrangler login
-```
-
-Create a Direct Upload Pages project:
-
-```text
 npx wrangler pages project create example-opid --production-branch main
+npx wrangler pages deploy ./site --project-name example-opid --branch main
 ```
 
-Use a globally unique, non-sensitive project name instead of `example-opid`.
-Then deploy the directory:
+Use a globally unique, non-sensitive project name. Test the returned
+`https://<project>.pages.dev` record URL before attaching the domain.
+Do not continue until it returns `200` with the intended bytes and headers.
+See [Direct Upload](https://developers.cloudflare.com/pages/get-started/direct-upload/).
+
+In **Workers & Pages → project → Custom domains**, choose **Set up a domain**
+and enter the exact OPID hostname. Create this association before manually
+adding a CNAME; a bare CNAME can produce `522`. Cloudflare normally creates:
 
 ```text
-npx wrangler pages deploy ./opid-site --project-name example-opid --branch main
+Type:   CNAME
+Name:   @                       # use pay for pay.example.com
+Target: example-opid.pages.dev
+Proxy:  Proxied
 ```
 
-Record the production `https://<project>.pages.dev` URL returned by Wrangler.
-Cloudflare's [Direct Upload guide](https://developers.cloudflare.com/pages/get-started/direct-upload/)
-documents the current commands.
+With confirmation, remove only conflicting web-serving `A`, `AAAA`, or `CNAME`
+records for that hostname. Preserve unrelated DNS. Wait for custom-domain and
+certificate status `Active`. See
+[Pages custom domains](https://developers.cloudflare.com/pages/configuration/custom-domains/).
 
-Test the Pages URL before attaching the real domain:
+## 5. Bind the signing key with DNSSEC
+
+Do not confuse the OPAP Ed25519 key with Cloudflare's DNSSEC key.
+
+1. In **Cloudflare → DNS → Settings → DNSSEC**, select **Enable DNSSEC**.
+2. Copy Cloudflare's DS data. At the registrar, enable DNSSEC and enter either:
+   - **DS form:** key tag, algorithm, digest type, and digest; or
+   - **DNSKEY form:** KSK/flags `257`, protocol `3`, algorithm, and public key.
+3. Wait until the parent zone publishes that DS and Cloudflare reports DNSSEC
+   `Active`.
+
+Verify both the parent DS and secure OPAP TXT response:
 
 ```text
-curl -i https://example-opid.pages.dev/.well-known/open-payment/record/Lw
+dig DS example.com @1.1.1.1 +dnssec
+dig TXT _opap.example.com @1.1.1.1 +dnssec
 ```
 
-Do not continue unless it returns the intended JSON with status `200` and the
-required headers.
-
-## 5. Attach the custom domain
-
-In the Cloudflare dashboard:
-
-1. Open **Workers & Pages**.
-2. Select the Pages project.
-3. Open **Custom domains**.
-4. Select **Set up a domain**.
-5. Enter the exact OPID hostname, such as `example.com` or
-   `pay.example.com`, and continue.
-
-Associate the hostname with the Pages project before manually creating a
-CNAME. A CNAME created without the Pages custom-domain association can produce
-a Cloudflare `522`.
-
-When the DNS zone is in the same Cloudflare account, Cloudflare normally
-creates the required proxied CNAME automatically:
+The first answer must match Cloudflare's DS; the TXT answer must be the intended
+trust record and the response flags must include `ad`. A portable JSON check is:
 
 ```text
-Type:    CNAME
-Name:    @
-Target:  example-opid.pages.dev
-Proxy:   Proxied
+curl -H "accept: application/dns-json" "https://cloudflare-dns.com/dns-query?name=_opap.example.com&type=TXT&do=1&cd=0"
 ```
 
-For `pay.example.com`, use `pay` as the name. If conflicting web-serving
-`A`, `AAAA`, or `CNAME` records already exist for that exact hostname, confirm
-that replacing the existing website is intended, then remove only those
-conflicting web records and create the Pages CNAME. Preserve unrelated records,
-especially `MX`, mail `TXT`, DKIM, DMARC, verification, and `CAA` records.
+Require `"AD":true`. Immediately after enabling DNSSEC, resolvers may retain
+the previous insecure result until its TTL expires; retry after that TTL rather
+than changing keys. A continuity-aware application that cannot load or validate
+evidence it expected MUST supply `unavailable`, never discard that evidence or
+silently substitute `none`.
 
-Wait until the Pages custom-domain status and certificate validation are both
-active. Follow Cloudflare's
-[Pages custom-domain guide](https://developers.cloudflare.com/pages/configuration/custom-domains/)
-if activation remains pending.
+## 6. Verify end to end
 
-## 6. Verify the live OPID
-
-Request the derived record URL without following redirects:
+Request the record without following redirects:
 
 ```text
 curl -i --max-redirs 0 https://example.com/.well-known/open-payment/record/Lw
 ```
 
-The response must have:
+Require:
 
 ```text
-HTTP status:                   200
-Access-Control-Allow-Origin:   *
-Access-Control-Expose-Headers: Content-Encoding, OPAP-Proof
-Cache-Control:                 no-store
-Content-Encoding:             identity
-Content-Type:                 application/opap+json
+status                              200
+Access-Control-Allow-Origin         *
+Access-Control-Expose-Headers       Content-Encoding, OPAP-Proof
+Cache-Control                       no-store
+Content-Encoding                    identity
+Content-Type                        application/opap+json
+OPAP-Proof                          v=1;sig=...   # signed profiles only
+Location                            absent
+body                                valid exact JSON, at most 65,536 bytes
 ```
 
-Also verify:
+Confirm the exact `id`, current validity, revision, recipient, and destination.
+Then test the canonical OPID at
+[openpaymentaddress.org](https://openpaymentaddress.org/). The minimal profile
+must resolve but reports no DNSSEC key binding. The recommended profile must
+show the expected masked destination, `Payment address verified`, and
+`DNSSEC key binding verified`.
 
-- there is no `Location` header;
-- the body is no larger than 65,536 bytes;
-- the body parses as JSON;
-- `id` exactly equals the submitted canonical OPID;
-- timestamps are currently valid;
-- the name and destination exactly match the confirmed values.
+## Updates
 
-Finally, enter the canonical OPID in an independent OPAP resolver, such as
-[openpaymentaddress.org](https://openpaymentaddress.org/). Success requires the
-resolver to report the payment address as verified and show the expected
-payment method and masked destination.
-
-## Updating or recovering a publication
-
-For every change:
-
-1. keep the same canonical `id`;
-2. increment `revision` above every previously published revision;
-3. set new valid `issued_at` and `expires_at` values;
-4. deploy the complete static directory again; and
-5. repeat the direct and resolver tests.
-
-Do not restore an old deployment containing a lower revision. Returning
-resolvers will correctly reject it as a rollback. To restore an earlier payment
-destination, publish that destination again in a new record with a higher
-revision.
+For every record change: keep `id`, increase `revision`, set valid timestamps,
+sign the final bytes again, deploy the complete `site`, and repeat all checks.
+Never restore a lower revision; republish the old destination under a higher
+one. Rotate origin keys only through the authenticated epoch transition in
+[OPAP/1 section 7](../specification/opap-1.md#7-binding-continuity-and-origin-key-epochs).
 
 ## Troubleshooting
 
-### Direct request is not `200`
-
-Check the Pages deployment, exact path key, custom-domain status, TLS
-certificate, and DNS CNAME. The record filename has no `.json` extension.
-
-### Direct request is `200`, but the resolver rejects the response
-
-Compare all transport headers exactly. A frequent error is exposing only
-`Content-Encoding`; the value must be:
-
-```text
-Content-Encoding, OPAP-Proof
-```
-
-Also check for redirects, compression instead of explicit `identity`, an
-expired record, an incorrect `id`, or an invalid IBAN checksum.
-
-### A Cloudflare-hosted resolver returns a generic `502`
-
-First verify the record directly. If the direct response is valid and the
-resolver itself runs as a Cloudflare Worker or Pages Function in the same
-Cloudflare account or zone, the resolver operator may need the
-`global_fetch_strictly_public` compatibility flag.
-
-Set that flag on the **resolver project**, not on this static publisher, and
-redeploy the resolver. The flag makes the resolver's global `fetch()` use
-Cloudflare's public front door. See Cloudflare's
-[compatibility flag documentation](https://developers.cloudflare.com/workers/configuration/compatibility-flags/#global-fetch-strictly-public).
-
-If the resolver is operated by someone else, report the valid direct response
-and the resolver's `502` to that operator.
+- **Not `200`:** check the exact extensionless path, Pages deployment, custom
+  domain, certificate, CNAME, and redirects.
+- **Invalid response:** compare every transport header; common causes are a
+  missing `OPAP-Proof` exposure, compression, bad `id`, expiry, or invalid IBAN.
+- **Proof present but trust record missing:** `_opap.<hostname>` was not
+  returned; check its owner/value and DNS caches.
+- **`identity_key_changed`:** supplied prior evidence contains an origin-key
+  entry but the current trust record is absent or unauthenticated. Restore the
+  intended trust record; do not discard the evidence or retry with `none`.
+- **No DNSSEC key binding:** verify the registrar's parent DS, Cloudflare
+  DNSSEC status, TXT `AD=true`, and expired cache TTL.
+- **Proof invalid:** the body changed after signing or the exact-route
+  `OPAP-Proof` header is wrong; sign the deployed bytes again.
+- **Cloudflare-hosted resolver `502`:** if the direct response is valid, the
+  resolver project—not this publisher—may need Cloudflare's
+  [`global_fetch_strictly_public`](https://developers.cloudflare.com/workers/configuration/compatibility-flags/#global-fetch-strictly-public)
+  compatibility flag. Otherwise report the valid direct response to its
+  operator.

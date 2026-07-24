@@ -1,0 +1,1265 @@
+{
+  "description": "Store-independent OPAP/1 continuity vectors. Each case is a pure transition from caller-supplied prior evidence and current validated publication/trust inputs to a reason code or deterministic proposed next evidence.",
+  "vectors": [
+    {
+      "id": "clean-process-none",
+      "prior_evidence": { "version": 1, "protocol": "OPAP/1", "state": "none" },
+      "current": {
+        "hosts": [
+          {
+            "hostname": "merchant.example",
+            "binding": "https",
+            "authentication": "origin-key",
+            "epoch": 1,
+            "public_key": "rvfodELbd45CXpY8meIGOl6GQtgIn2zd9Yu4MnLi2Kc",
+            "recovery_commitment": "ed25519-sha256:z3l4IwyfWCUDGgnl49pEiv40nXZ-isFREc8HGwlS9eQ"
+          }
+        ],
+        "opids": [
+          {
+            "opid": "https://merchant.example/pay",
+            "hostname": "merchant.example",
+            "revision": 7,
+            "record_fingerprint": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "target_projection": {
+              "options": [
+                { "type": "sepa", "currency": "EUR", "iban": "NL91ABNA0417164300" }
+              ]
+            },
+            "target_fingerprint": "sha256:bff17957f6c9dc77b8973514dd5412c4158e3c3f58fba9eac54c1dfbbcfe5c4d",
+            "binding": "https",
+            "authentication": "origin-key"
+          }
+        ]
+      },
+      "expected": {
+        "result": "success",
+        "node_results": [
+          { "opid": "https://merchant.example/pay", "history": "none", "continuity": "first-use" }
+        ],
+        "proposed_evidence": {
+          "version": 1,
+          "protocol": "OPAP/1",
+          "state": "available",
+          "evidence": {
+            "hosts": [
+              {
+                "hostname": "merchant.example",
+                "highest_binding": "https",
+                "authentication": "origin-key",
+                "epoch": 1,
+                "public_key": "rvfodELbd45CXpY8meIGOl6GQtgIn2zd9Yu4MnLi2Kc",
+                "key_fingerprint": "sha256:f6cc17d1c5e501c3e0bcda62667dd1a88885f6a5f7b9aa0197ae0c39472b62c6",
+                "recovery_commitment": "ed25519-sha256:z3l4IwyfWCUDGgnl49pEiv40nXZ-isFREc8HGwlS9eQ",
+                "retired_key_fingerprints": []
+              }
+            ],
+            "opids": [
+              {
+                "opid": "https://merchant.example/pay",
+                "hostname": "merchant.example",
+                "revision": 7,
+                "record_fingerprint": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+                "target_projection": {
+                  "options": [
+                    { "type": "sepa", "currency": "EUR", "iban": "NL91ABNA0417164300" }
+                  ]
+                },
+                "target_fingerprint": "sha256:bff17957f6c9dc77b8973514dd5412c4158e3c3f58fba9eac54c1dfbbcfe5c4d",
+                "highest_binding": "https",
+                "authentication": "origin-key"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "returning-unchanged",
+      "prior_evidence": {
+        "version": 1,
+        "protocol": "OPAP/1",
+        "state": "available",
+        "evidence": {
+          "hosts": [
+            {
+              "hostname": "merchant.example",
+              "highest_binding": "https",
+              "authentication": "origin-key",
+              "epoch": 1,
+              "public_key": "rvfodELbd45CXpY8meIGOl6GQtgIn2zd9Yu4MnLi2Kc",
+              "key_fingerprint": "sha256:f6cc17d1c5e501c3e0bcda62667dd1a88885f6a5f7b9aa0197ae0c39472b62c6",
+              "recovery_commitment": "ed25519-sha256:z3l4IwyfWCUDGgnl49pEiv40nXZ-isFREc8HGwlS9eQ",
+              "retired_key_fingerprints": []
+            }
+          ],
+          "opids": [
+            {
+              "opid": "https://merchant.example/pay",
+              "hostname": "merchant.example",
+              "revision": 7,
+              "record_fingerprint": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+              "target_projection": {
+                "options": [
+                  { "type": "sepa", "currency": "EUR", "iban": "NL91ABNA0417164300" }
+                ]
+              },
+              "target_fingerprint": "sha256:bff17957f6c9dc77b8973514dd5412c4158e3c3f58fba9eac54c1dfbbcfe5c4d",
+              "highest_binding": "https",
+              "authentication": "origin-key"
+            }
+          ]
+        }
+      },
+      "current": {
+        "hosts": [
+          {
+            "hostname": "merchant.example",
+            "binding": "https",
+            "authentication": "origin-key",
+            "epoch": 1,
+            "public_key": "rvfodELbd45CXpY8meIGOl6GQtgIn2zd9Yu4MnLi2Kc",
+            "recovery_commitment": "ed25519-sha256:z3l4IwyfWCUDGgnl49pEiv40nXZ-isFREc8HGwlS9eQ"
+          }
+        ],
+        "opids": [
+          {
+            "opid": "https://merchant.example/pay",
+            "hostname": "merchant.example",
+            "revision": 7,
+            "record_fingerprint": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "target_projection": {
+              "options": [
+                { "type": "sepa", "currency": "EUR", "iban": "NL91ABNA0417164300" }
+              ]
+            },
+            "target_fingerprint": "sha256:bff17957f6c9dc77b8973514dd5412c4158e3c3f58fba9eac54c1dfbbcfe5c4d",
+            "binding": "https",
+            "authentication": "origin-key"
+          }
+        ]
+      },
+      "expected": {
+        "result": "success",
+        "node_results": [
+          { "opid": "https://merchant.example/pay", "history": "available", "continuity": "bound" }
+        ],
+        "proposed_evidence": {
+          "version": 1,
+          "protocol": "OPAP/1",
+          "state": "available",
+          "evidence": {
+            "hosts": [
+              {
+                "hostname": "merchant.example",
+                "highest_binding": "https",
+                "authentication": "origin-key",
+                "epoch": 1,
+                "public_key": "rvfodELbd45CXpY8meIGOl6GQtgIn2zd9Yu4MnLi2Kc",
+                "key_fingerprint": "sha256:f6cc17d1c5e501c3e0bcda62667dd1a88885f6a5f7b9aa0197ae0c39472b62c6",
+                "recovery_commitment": "ed25519-sha256:z3l4IwyfWCUDGgnl49pEiv40nXZ-isFREc8HGwlS9eQ",
+                "retired_key_fingerprints": []
+              }
+            ],
+            "opids": [
+              {
+                "opid": "https://merchant.example/pay",
+                "hostname": "merchant.example",
+                "revision": 7,
+                "record_fingerprint": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+                "target_projection": {
+                  "options": [
+                    { "type": "sepa", "currency": "EUR", "iban": "NL91ABNA0417164300" }
+                  ]
+                },
+                "target_fingerprint": "sha256:bff17957f6c9dc77b8973514dd5412c4158e3c3f58fba9eac54c1dfbbcfe5c4d",
+                "highest_binding": "https",
+                "authentication": "origin-key"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "authenticated-one-step-key-transition",
+      "prior_evidence": {
+        "version": 1,
+        "protocol": "OPAP/1",
+        "state": "available",
+        "evidence": {
+          "hosts": [
+            {
+              "hostname": "merchant.example",
+              "highest_binding": "https",
+              "authentication": "origin-key",
+              "epoch": 1,
+              "public_key": "rvfodELbd45CXpY8meIGOl6GQtgIn2zd9Yu4MnLi2Kc",
+              "key_fingerprint": "sha256:f6cc17d1c5e501c3e0bcda62667dd1a88885f6a5f7b9aa0197ae0c39472b62c6",
+              "recovery_commitment": "ed25519-sha256:z3l4IwyfWCUDGgnl49pEiv40nXZ-isFREc8HGwlS9eQ",
+              "authenticated_next": {
+                "epoch": 2,
+                "public_key": "5E5BvlKlD-7o9xT8NOKhu2EJKIJAmj3T0TID40AS05w",
+                "key_fingerprint": "sha256:3a8d79700b742939f0c01bfd3d9c8f55367a3f494988d1060f494e86065c1e03",
+                "transition_signature": "nJpuFi-WsEgH4wZxm3DXd9tot2_mYEgVZeSEd-a4tvTSBoGrobhN7NAHlNFnMrkpQJVnk9vJzCdkN19dtiVPBw"
+              },
+              "retired_key_fingerprints": []
+            }
+          ],
+          "opids": [
+            {
+              "opid": "https://merchant.example/pay",
+              "hostname": "merchant.example",
+              "revision": 7,
+              "record_fingerprint": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+              "target_projection": {
+                "options": [
+                  { "type": "sepa", "currency": "EUR", "iban": "NL91ABNA0417164300" }
+                ]
+              },
+              "target_fingerprint": "sha256:bff17957f6c9dc77b8973514dd5412c4158e3c3f58fba9eac54c1dfbbcfe5c4d",
+              "highest_binding": "https",
+              "authentication": "origin-key"
+            }
+          ]
+        }
+      },
+      "current": {
+        "hosts": [
+          {
+            "hostname": "merchant.example",
+            "binding": "dnssec",
+            "authentication": "origin-key",
+            "epoch": 2,
+            "public_key": "5E5BvlKlD-7o9xT8NOKhu2EJKIJAmj3T0TID40AS05w",
+            "recovery_commitment": "ed25519-sha256:z3l4IwyfWCUDGgnl49pEiv40nXZ-isFREc8HGwlS9eQ"
+          }
+        ],
+        "opids": [
+          {
+            "opid": "https://merchant.example/pay",
+            "hostname": "merchant.example",
+            "revision": 8,
+            "record_fingerprint": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+            "target_projection": {
+              "options": [
+                { "type": "sepa", "currency": "EUR", "iban": "NL91ABNA0417164300" }
+              ]
+            },
+            "target_fingerprint": "sha256:bff17957f6c9dc77b8973514dd5412c4158e3c3f58fba9eac54c1dfbbcfe5c4d",
+            "binding": "dnssec",
+            "authentication": "origin-key"
+          }
+        ]
+      },
+      "expected": {
+        "result": "success",
+        "node_results": [
+          { "opid": "https://merchant.example/pay", "history": "available", "continuity": "bound" }
+        ],
+        "proposed_evidence": {
+          "version": 1,
+          "protocol": "OPAP/1",
+          "state": "available",
+          "evidence": {
+            "hosts": [
+              {
+                "hostname": "merchant.example",
+                "highest_binding": "dnssec",
+                "authentication": "origin-key",
+                "epoch": 2,
+                "public_key": "5E5BvlKlD-7o9xT8NOKhu2EJKIJAmj3T0TID40AS05w",
+                "key_fingerprint": "sha256:3a8d79700b742939f0c01bfd3d9c8f55367a3f494988d1060f494e86065c1e03",
+                "recovery_commitment": "ed25519-sha256:z3l4IwyfWCUDGgnl49pEiv40nXZ-isFREc8HGwlS9eQ",
+                "retired_key_fingerprints": [
+                  "sha256:f6cc17d1c5e501c3e0bcda62667dd1a88885f6a5f7b9aa0197ae0c39472b62c6"
+                ]
+              }
+            ],
+            "opids": [
+              {
+                "opid": "https://merchant.example/pay",
+                "hostname": "merchant.example",
+                "revision": 8,
+                "record_fingerprint": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+                "target_projection": {
+                  "options": [
+                    { "type": "sepa", "currency": "EUR", "iban": "NL91ABNA0417164300" }
+                  ]
+                },
+                "target_fingerprint": "sha256:bff17957f6c9dc77b8973514dd5412c4158e3c3f58fba9eac54c1dfbbcfe5c4d",
+                "highest_binding": "dnssec",
+                "authentication": "origin-key"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "retired-key-reuse",
+      "prior_evidence": {
+        "version": 1,
+        "protocol": "OPAP/1",
+        "state": "available",
+        "evidence": {
+          "hosts": [
+            {
+              "hostname": "merchant.example",
+              "highest_binding": "https",
+              "authentication": "origin-key",
+              "epoch": 2,
+              "public_key": "5E5BvlKlD-7o9xT8NOKhu2EJKIJAmj3T0TID40AS05w",
+              "key_fingerprint": "sha256:3a8d79700b742939f0c01bfd3d9c8f55367a3f494988d1060f494e86065c1e03",
+              "recovery_commitment": "ed25519-sha256:z3l4IwyfWCUDGgnl49pEiv40nXZ-isFREc8HGwlS9eQ",
+              "retired_key_fingerprints": [
+                "sha256:f6cc17d1c5e501c3e0bcda62667dd1a88885f6a5f7b9aa0197ae0c39472b62c6"
+              ]
+            }
+          ],
+          "opids": [
+            {
+              "opid": "https://merchant.example/pay",
+              "hostname": "merchant.example",
+              "revision": 8,
+              "record_fingerprint": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+              "target_projection": {
+                "options": [
+                  { "type": "sepa", "currency": "EUR", "iban": "NL91ABNA0417164300" }
+                ]
+              },
+              "target_fingerprint": "sha256:bff17957f6c9dc77b8973514dd5412c4158e3c3f58fba9eac54c1dfbbcfe5c4d",
+              "highest_binding": "https",
+              "authentication": "origin-key"
+            }
+          ]
+        }
+      },
+      "current": {
+        "hosts": [
+          {
+            "hostname": "merchant.example",
+            "binding": "https",
+            "authentication": "origin-key",
+            "epoch": 3,
+            "public_key": "rvfodELbd45CXpY8meIGOl6GQtgIn2zd9Yu4MnLi2Kc",
+            "recovery_commitment": "ed25519-sha256:z3l4IwyfWCUDGgnl49pEiv40nXZ-isFREc8HGwlS9eQ"
+          }
+        ],
+        "opids": [
+          {
+            "opid": "https://merchant.example/pay",
+            "hostname": "merchant.example",
+            "revision": 9,
+            "record_fingerprint": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+            "target_projection": {
+              "options": [
+                { "type": "sepa", "currency": "EUR", "iban": "NL91ABNA0417164300" }
+              ]
+            },
+            "target_fingerprint": "sha256:bff17957f6c9dc77b8973514dd5412c4158e3c3f58fba9eac54c1dfbbcfe5c4d",
+            "binding": "https",
+            "authentication": "origin-key"
+          }
+        ]
+      },
+      "expected": {
+        "result": "error",
+        "reason": "identity_key_rollback",
+        "proposed_evidence": null
+      }
+    },
+    {
+      "id": "same-epoch-key-replacement",
+      "prior_evidence": {
+        "version": 1,
+        "protocol": "OPAP/1",
+        "state": "available",
+        "evidence": {
+          "hosts": [
+            {
+              "hostname": "merchant.example",
+              "highest_binding": "https",
+              "authentication": "origin-key",
+              "epoch": 1,
+              "public_key": "rvfodELbd45CXpY8meIGOl6GQtgIn2zd9Yu4MnLi2Kc",
+              "key_fingerprint": "sha256:f6cc17d1c5e501c3e0bcda62667dd1a88885f6a5f7b9aa0197ae0c39472b62c6",
+              "recovery_commitment": "ed25519-sha256:z3l4IwyfWCUDGgnl49pEiv40nXZ-isFREc8HGwlS9eQ",
+              "retired_key_fingerprints": []
+            }
+          ],
+          "opids": [
+            {
+              "opid": "https://merchant.example/pay",
+              "hostname": "merchant.example",
+              "revision": 7,
+              "record_fingerprint": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+              "target_projection": {
+                "options": [
+                  { "type": "sepa", "currency": "EUR", "iban": "NL91ABNA0417164300" }
+                ]
+              },
+              "target_fingerprint": "sha256:bff17957f6c9dc77b8973514dd5412c4158e3c3f58fba9eac54c1dfbbcfe5c4d",
+              "highest_binding": "https",
+              "authentication": "origin-key"
+            }
+          ]
+        }
+      },
+      "current": {
+        "hosts": [
+          {
+            "hostname": "merchant.example",
+            "binding": "https",
+            "authentication": "origin-key",
+            "epoch": 1,
+            "public_key": "5E5BvlKlD-7o9xT8NOKhu2EJKIJAmj3T0TID40AS05w",
+            "recovery_commitment": "ed25519-sha256:z3l4IwyfWCUDGgnl49pEiv40nXZ-isFREc8HGwlS9eQ"
+          }
+        ],
+        "opids": [
+          {
+            "opid": "https://merchant.example/pay",
+            "hostname": "merchant.example",
+            "revision": 8,
+            "record_fingerprint": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+            "target_projection": {
+              "options": [
+                { "type": "sepa", "currency": "EUR", "iban": "NL91ABNA0417164300" }
+              ]
+            },
+            "target_fingerprint": "sha256:bff17957f6c9dc77b8973514dd5412c4158e3c3f58fba9eac54c1dfbbcfe5c4d",
+            "binding": "https",
+            "authentication": "origin-key"
+          }
+        ]
+      },
+      "expected": {
+        "result": "error",
+        "reason": "identity_key_changed",
+        "old_evidence": {
+          "version": 1,
+          "protocol": "OPAP/1",
+          "state": "available",
+          "evidence": {
+            "hosts": [
+              {
+                "hostname": "merchant.example",
+                "highest_binding": "https",
+                "authentication": "origin-key",
+                "epoch": 1,
+                "public_key": "rvfodELbd45CXpY8meIGOl6GQtgIn2zd9Yu4MnLi2Kc",
+                "key_fingerprint": "sha256:f6cc17d1c5e501c3e0bcda62667dd1a88885f6a5f7b9aa0197ae0c39472b62c6",
+                "recovery_commitment": "ed25519-sha256:z3l4IwyfWCUDGgnl49pEiv40nXZ-isFREc8HGwlS9eQ",
+                "retired_key_fingerprints": []
+              }
+            ],
+            "opids": [
+              {
+                "opid": "https://merchant.example/pay",
+                "hostname": "merchant.example",
+                "revision": 7,
+                "record_fingerprint": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+                "target_projection": {
+                  "options": [
+                    { "type": "sepa", "currency": "EUR", "iban": "NL91ABNA0417164300" }
+                  ]
+                },
+                "target_fingerprint": "sha256:bff17957f6c9dc77b8973514dd5412c4158e3c3f58fba9eac54c1dfbbcfe5c4d",
+                "highest_binding": "https",
+                "authentication": "origin-key"
+              }
+            ]
+          }
+        },
+        "proposed_evidence": {
+          "version": 1,
+          "protocol": "OPAP/1",
+          "state": "available",
+          "evidence": {
+            "hosts": [
+              {
+                "hostname": "merchant.example",
+                "highest_binding": "https",
+                "authentication": "origin-key",
+                "epoch": 1,
+                "public_key": "5E5BvlKlD-7o9xT8NOKhu2EJKIJAmj3T0TID40AS05w",
+                "key_fingerprint": "sha256:3a8d79700b742939f0c01bfd3d9c8f55367a3f494988d1060f494e86065c1e03",
+                "recovery_commitment": "ed25519-sha256:z3l4IwyfWCUDGgnl49pEiv40nXZ-isFREc8HGwlS9eQ",
+                "retired_key_fingerprints": [
+                  "sha256:f6cc17d1c5e501c3e0bcda62667dd1a88885f6a5f7b9aa0197ae0c39472b62c6"
+                ]
+              }
+            ],
+            "opids": [
+              {
+                "opid": "https://merchant.example/pay",
+                "hostname": "merchant.example",
+                "revision": 8,
+                "record_fingerprint": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+                "target_projection": {
+                  "options": [
+                    { "type": "sepa", "currency": "EUR", "iban": "NL91ABNA0417164300" }
+                  ]
+                },
+                "target_fingerprint": "sha256:bff17957f6c9dc77b8973514dd5412c4158e3c3f58fba9eac54c1dfbbcfe5c4d",
+                "highest_binding": "https",
+                "authentication": "origin-key"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "unauthenticated-epoch-jump",
+      "prior_evidence": {
+        "version": 1,
+        "protocol": "OPAP/1",
+        "state": "available",
+        "evidence": {
+          "hosts": [
+            {
+              "hostname": "merchant.example",
+              "highest_binding": "https",
+              "authentication": "origin-key",
+              "epoch": 1,
+              "public_key": "rvfodELbd45CXpY8meIGOl6GQtgIn2zd9Yu4MnLi2Kc",
+              "key_fingerprint": "sha256:f6cc17d1c5e501c3e0bcda62667dd1a88885f6a5f7b9aa0197ae0c39472b62c6",
+              "recovery_commitment": "ed25519-sha256:z3l4IwyfWCUDGgnl49pEiv40nXZ-isFREc8HGwlS9eQ",
+              "retired_key_fingerprints": []
+            }
+          ],
+          "opids": [
+            {
+              "opid": "https://merchant.example/pay",
+              "hostname": "merchant.example",
+              "revision": 7,
+              "record_fingerprint": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+              "target_projection": {
+                "options": [
+                  { "type": "sepa", "currency": "EUR", "iban": "NL91ABNA0417164300" }
+                ]
+              },
+              "target_fingerprint": "sha256:bff17957f6c9dc77b8973514dd5412c4158e3c3f58fba9eac54c1dfbbcfe5c4d",
+              "highest_binding": "https",
+              "authentication": "origin-key"
+            }
+          ]
+        }
+      },
+      "current": {
+        "hosts": [
+          {
+            "hostname": "merchant.example",
+            "binding": "https",
+            "authentication": "origin-key",
+            "epoch": 3,
+            "public_key": "4BPjEg_5Hk-SizZDNvUJi_xbHbd-zI67mDr5_BeQFuw",
+            "recovery_commitment": "ed25519-sha256:z3l4IwyfWCUDGgnl49pEiv40nXZ-isFREc8HGwlS9eQ"
+          }
+        ],
+        "opids": [
+          {
+            "opid": "https://merchant.example/pay",
+            "hostname": "merchant.example",
+            "revision": 8,
+            "record_fingerprint": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+            "target_projection": {
+              "options": [
+                { "type": "sepa", "currency": "EUR", "iban": "NL91ABNA0417164300" }
+              ]
+            },
+            "target_fingerprint": "sha256:bff17957f6c9dc77b8973514dd5412c4158e3c3f58fba9eac54c1dfbbcfe5c4d",
+            "binding": "https",
+            "authentication": "origin-key"
+          }
+        ]
+      },
+      "expected": {
+        "result": "error",
+        "reason": "identity_key_transition_invalid",
+        "proposed_evidence": null
+      }
+    },
+    {
+      "id": "record-rollback",
+      "prior_evidence": {
+        "version": 1,
+        "protocol": "OPAP/1",
+        "state": "available",
+        "evidence": {
+          "hosts": [
+            {
+              "hostname": "merchant.example",
+              "highest_binding": "https",
+              "authentication": "unsigned"
+            }
+          ],
+          "opids": [
+            {
+              "opid": "https://merchant.example/pay",
+              "hostname": "merchant.example",
+              "revision": 8,
+              "record_fingerprint": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+              "target_projection": {
+                "options": [
+                  { "type": "sepa", "currency": "EUR", "iban": "NL91ABNA0417164300" }
+                ]
+              },
+              "target_fingerprint": "sha256:bff17957f6c9dc77b8973514dd5412c4158e3c3f58fba9eac54c1dfbbcfe5c4d",
+              "highest_binding": "https",
+              "authentication": "unsigned"
+            }
+          ]
+        }
+      },
+      "current": {
+        "hosts": [
+          {
+            "hostname": "merchant.example",
+            "binding": "https",
+            "authentication": "unsigned"
+          }
+        ],
+        "opids": [
+          {
+            "opid": "https://merchant.example/pay",
+            "hostname": "merchant.example",
+            "revision": 7,
+            "record_fingerprint": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "target_projection": {
+              "options": [
+                { "type": "sepa", "currency": "EUR", "iban": "NL91ABNA0417164300" }
+              ]
+            },
+            "target_fingerprint": "sha256:bff17957f6c9dc77b8973514dd5412c4158e3c3f58fba9eac54c1dfbbcfe5c4d",
+            "binding": "https",
+            "authentication": "unsigned"
+          }
+        ]
+      },
+      "expected": {
+        "result": "error",
+        "reason": "record_rollback",
+        "proposed_evidence": null
+      }
+    },
+    {
+      "id": "same-revision-byte-conflict",
+      "prior_evidence": {
+        "version": 1,
+        "protocol": "OPAP/1",
+        "state": "available",
+        "evidence": {
+          "hosts": [
+            {
+              "hostname": "merchant.example",
+              "highest_binding": "https",
+              "authentication": "unsigned"
+            }
+          ],
+          "opids": [
+            {
+              "opid": "https://merchant.example/pay",
+              "hostname": "merchant.example",
+              "revision": 8,
+              "record_fingerprint": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+              "target_projection": {
+                "options": [
+                  { "type": "sepa", "currency": "EUR", "iban": "NL91ABNA0417164300" }
+                ]
+              },
+              "target_fingerprint": "sha256:bff17957f6c9dc77b8973514dd5412c4158e3c3f58fba9eac54c1dfbbcfe5c4d",
+              "highest_binding": "https",
+              "authentication": "unsigned"
+            }
+          ]
+        }
+      },
+      "current": {
+        "hosts": [
+          {
+            "hostname": "merchant.example",
+            "binding": "https",
+            "authentication": "unsigned"
+          }
+        ],
+        "opids": [
+          {
+            "opid": "https://merchant.example/pay",
+            "hostname": "merchant.example",
+            "revision": 8,
+            "record_fingerprint": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+            "target_projection": {
+              "options": [
+                { "type": "sepa", "currency": "EUR", "iban": "NL91ABNA0417164300" }
+              ]
+            },
+            "target_fingerprint": "sha256:bff17957f6c9dc77b8973514dd5412c4158e3c3f58fba9eac54c1dfbbcfe5c4d",
+            "binding": "https",
+            "authentication": "unsigned"
+          }
+        ]
+      },
+      "expected": {
+        "result": "error",
+        "reason": "record_revision_conflict",
+        "proposed_evidence": null
+      }
+    },
+    {
+      "id": "target-fingerprint-change",
+      "prior_evidence": {
+        "version": 1,
+        "protocol": "OPAP/1",
+        "state": "available",
+        "evidence": {
+          "hosts": [
+            {
+              "hostname": "merchant.example",
+              "highest_binding": "https",
+              "authentication": "unsigned"
+            }
+          ],
+          "opids": [
+            {
+              "opid": "https://merchant.example/pay",
+              "hostname": "merchant.example",
+              "revision": 7,
+              "record_fingerprint": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+              "target_projection": {
+                "options": [
+                  { "type": "sepa", "currency": "EUR", "iban": "NL91ABNA0417164300" }
+                ]
+              },
+              "target_fingerprint": "sha256:bff17957f6c9dc77b8973514dd5412c4158e3c3f58fba9eac54c1dfbbcfe5c4d",
+              "highest_binding": "https",
+              "authentication": "unsigned"
+            }
+          ]
+        }
+      },
+      "current": {
+        "hosts": [
+          {
+            "hostname": "merchant.example",
+            "binding": "https",
+            "authentication": "unsigned"
+          }
+        ],
+        "opids": [
+          {
+            "opid": "https://merchant.example/pay",
+            "hostname": "merchant.example",
+            "revision": 8,
+            "record_fingerprint": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+            "target_projection": {
+              "options": [
+                { "type": "sepa", "currency": "EUR", "iban": "NL20INGB0001234567" }
+              ]
+            },
+            "target_fingerprint": "sha256:f5d989a31049a68a730c0769abcdd7bc0536edfbbc43362988916507816a03d4",
+            "binding": "https",
+            "authentication": "unsigned"
+          }
+        ]
+      },
+      "expected": {
+        "result": "error",
+        "reason": "payment_target_changed",
+        "old_evidence": {
+          "version": 1,
+          "protocol": "OPAP/1",
+          "state": "available",
+          "evidence": {
+            "hosts": [
+              {
+                "hostname": "merchant.example",
+                "highest_binding": "https",
+                "authentication": "unsigned"
+              }
+            ],
+            "opids": [
+              {
+                "opid": "https://merchant.example/pay",
+                "hostname": "merchant.example",
+                "revision": 7,
+                "record_fingerprint": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+                "target_projection": {
+                  "options": [
+                    { "type": "sepa", "currency": "EUR", "iban": "NL91ABNA0417164300" }
+                  ]
+                },
+                "target_fingerprint": "sha256:bff17957f6c9dc77b8973514dd5412c4158e3c3f58fba9eac54c1dfbbcfe5c4d",
+                "highest_binding": "https",
+                "authentication": "unsigned"
+              }
+            ]
+          }
+        },
+        "proposed_evidence": {
+          "version": 1,
+          "protocol": "OPAP/1",
+          "state": "available",
+          "evidence": {
+            "hosts": [
+              {
+                "hostname": "merchant.example",
+                "highest_binding": "https",
+                "authentication": "unsigned"
+              }
+            ],
+            "opids": [
+              {
+                "opid": "https://merchant.example/pay",
+                "hostname": "merchant.example",
+                "revision": 8,
+                "record_fingerprint": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+                "target_projection": {
+                  "options": [
+                    { "type": "sepa", "currency": "EUR", "iban": "NL20INGB0001234567" }
+                  ]
+                },
+                "target_fingerprint": "sha256:f5d989a31049a68a730c0769abcdd7bc0536edfbbc43362988916507816a03d4",
+                "highest_binding": "https",
+                "authentication": "unsigned"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "expected-evidence-unavailable",
+      "prior_evidence": { "version": 1, "protocol": "OPAP/1", "state": "unavailable" },
+      "current": {
+        "hosts": [
+          {
+            "hostname": "merchant.example",
+            "binding": "https",
+            "authentication": "unsigned"
+          }
+        ],
+        "opids": [
+          {
+            "opid": "https://merchant.example/pay",
+            "hostname": "merchant.example",
+            "revision": 7,
+            "record_fingerprint": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "target_projection": {
+              "options": [
+                { "type": "sepa", "currency": "EUR", "iban": "NL91ABNA0417164300" }
+              ]
+            },
+            "target_fingerprint": "sha256:bff17957f6c9dc77b8973514dd5412c4158e3c3f58fba9eac54c1dfbbcfe5c4d",
+            "binding": "https",
+            "authentication": "unsigned"
+          }
+        ]
+      },
+      "expected": {
+        "result": "error",
+        "reason": "trust_history_unavailable",
+        "proposed_evidence": null
+      }
+    },
+    {
+      "id": "malformed-available-evidence",
+      "prior_evidence_valid": false,
+      "prior_evidence": { "version": 1, "protocol": "OPAP/1", "state": "available" },
+      "current": {
+        "hosts": [
+          {
+            "hostname": "merchant.example",
+            "binding": "https",
+            "authentication": "unsigned"
+          }
+        ],
+        "opids": [
+          {
+            "opid": "https://merchant.example/pay",
+            "hostname": "merchant.example",
+            "revision": 7,
+            "record_fingerprint": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "target_projection": {
+              "options": [
+                { "type": "sepa", "currency": "EUR", "iban": "NL91ABNA0417164300" }
+              ]
+            },
+            "target_fingerprint": "sha256:bff17957f6c9dc77b8973514dd5412c4158e3c3f58fba9eac54c1dfbbcfe5c4d",
+            "binding": "https",
+            "authentication": "unsigned"
+          }
+        ]
+      },
+      "expected": {
+        "result": "error",
+        "reason": "trust_history_unavailable",
+        "proposed_evidence": null
+      }
+    },
+    {
+      "id": "semantically-invalid-available-evidence",
+      "prior_evidence_valid": false,
+      "prior_evidence": {
+        "version": 1,
+        "protocol": "OPAP/1",
+        "state": "available",
+        "evidence": {
+          "hosts": [
+            {
+              "hostname": "merchant.example",
+              "highest_binding": "https",
+              "authentication": "unsigned"
+            }
+          ],
+          "opids": [
+            {
+              "opid": "https://merchant.example/pay",
+              "hostname": "merchant.example",
+              "revision": 7,
+              "record_fingerprint": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+              "target_projection": {
+                "options": [
+                  { "type": "sepa", "currency": "EUR", "iban": "NL91ABNA0417164300" }
+                ]
+              },
+              "target_fingerprint": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+              "highest_binding": "https",
+              "authentication": "unsigned"
+            }
+          ]
+        }
+      },
+      "current": {
+        "hosts": [
+          {
+            "hostname": "merchant.example",
+            "binding": "https",
+            "authentication": "unsigned"
+          }
+        ],
+        "opids": [
+          {
+            "opid": "https://merchant.example/pay",
+            "hostname": "merchant.example",
+            "revision": 7,
+            "record_fingerprint": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "target_projection": {
+              "options": [
+                { "type": "sepa", "currency": "EUR", "iban": "NL91ABNA0417164300" }
+              ]
+            },
+            "target_fingerprint": "sha256:bff17957f6c9dc77b8973514dd5412c4158e3c3f58fba9eac54c1dfbbcfe5c4d",
+            "binding": "https",
+            "authentication": "unsigned"
+          }
+        ]
+      },
+      "expected": {
+        "result": "error",
+        "reason": "trust_history_unavailable",
+        "proposed_evidence": null
+      }
+    },
+    {
+      "id": "missing-trust-record-after-origin-key-evidence",
+      "prior_evidence": {
+        "version": 1,
+        "protocol": "OPAP/1",
+        "state": "available",
+        "evidence": {
+          "hosts": [
+            {
+              "hostname": "merchant.example",
+              "highest_binding": "https",
+              "authentication": "origin-key",
+              "epoch": 1,
+              "public_key": "rvfodELbd45CXpY8meIGOl6GQtgIn2zd9Yu4MnLi2Kc",
+              "key_fingerprint": "sha256:f6cc17d1c5e501c3e0bcda62667dd1a88885f6a5f7b9aa0197ae0c39472b62c6",
+              "recovery_commitment": "ed25519-sha256:z3l4IwyfWCUDGgnl49pEiv40nXZ-isFREc8HGwlS9eQ",
+              "retired_key_fingerprints": []
+            }
+          ],
+          "opids": [
+            {
+              "opid": "https://merchant.example/pay",
+              "hostname": "merchant.example",
+              "revision": 7,
+              "record_fingerprint": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+              "target_projection": {
+                "options": [
+                  { "type": "sepa", "currency": "EUR", "iban": "NL91ABNA0417164300" }
+                ]
+              },
+              "target_fingerprint": "sha256:bff17957f6c9dc77b8973514dd5412c4158e3c3f58fba9eac54c1dfbbcfe5c4d",
+              "highest_binding": "https",
+              "authentication": "origin-key"
+            }
+          ]
+        }
+      },
+      "current": {
+        "hosts": [
+          {
+            "hostname": "merchant.example",
+            "binding": "https",
+            "authentication": "unsigned"
+          }
+        ],
+        "opids": [
+          {
+            "opid": "https://merchant.example/pay",
+            "hostname": "merchant.example",
+            "revision": 8,
+            "record_fingerprint": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+            "target_projection": {
+              "options": [
+                { "type": "sepa", "currency": "EUR", "iban": "NL91ABNA0417164300" }
+              ]
+            },
+            "target_fingerprint": "sha256:bff17957f6c9dc77b8973514dd5412c4158e3c3f58fba9eac54c1dfbbcfe5c4d",
+            "binding": "https",
+            "authentication": "unsigned"
+          }
+        ]
+      },
+      "expected": {
+        "result": "error",
+        "reason": "identity_key_changed",
+        "old_evidence": {
+          "version": 1,
+          "protocol": "OPAP/1",
+          "state": "available",
+          "evidence": {
+            "hosts": [
+              {
+                "hostname": "merchant.example",
+                "highest_binding": "https",
+                "authentication": "origin-key",
+                "epoch": 1,
+                "public_key": "rvfodELbd45CXpY8meIGOl6GQtgIn2zd9Yu4MnLi2Kc",
+                "key_fingerprint": "sha256:f6cc17d1c5e501c3e0bcda62667dd1a88885f6a5f7b9aa0197ae0c39472b62c6",
+                "recovery_commitment": "ed25519-sha256:z3l4IwyfWCUDGgnl49pEiv40nXZ-isFREc8HGwlS9eQ",
+                "retired_key_fingerprints": []
+              }
+            ],
+            "opids": [
+              {
+                "opid": "https://merchant.example/pay",
+                "hostname": "merchant.example",
+                "revision": 7,
+                "record_fingerprint": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+                "target_projection": {
+                  "options": [
+                    { "type": "sepa", "currency": "EUR", "iban": "NL91ABNA0417164300" }
+                  ]
+                },
+                "target_fingerprint": "sha256:bff17957f6c9dc77b8973514dd5412c4158e3c3f58fba9eac54c1dfbbcfe5c4d",
+                "highest_binding": "https",
+                "authentication": "origin-key"
+              }
+            ]
+          }
+        },
+        "proposed_evidence": {
+          "version": 1,
+          "protocol": "OPAP/1",
+          "state": "available",
+          "evidence": {
+            "hosts": [
+              {
+                "hostname": "merchant.example",
+                "highest_binding": "https",
+                "authentication": "unsigned"
+              }
+            ],
+            "opids": [
+              {
+                "opid": "https://merchant.example/pay",
+                "hostname": "merchant.example",
+                "revision": 8,
+                "record_fingerprint": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+                "target_projection": {
+                  "options": [
+                    { "type": "sepa", "currency": "EUR", "iban": "NL91ABNA0417164300" }
+                  ]
+                },
+                "target_fingerprint": "sha256:bff17957f6c9dc77b8973514dd5412c4158e3c3f58fba9eac54c1dfbbcfe5c4d",
+                "highest_binding": "https",
+                "authentication": "unsigned"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "multi-host-opid-graph",
+      "prior_evidence": {
+        "version": 1,
+        "protocol": "OPAP/1",
+        "state": "available",
+        "evidence": {
+          "hosts": [
+            {
+              "hostname": "merchant.example",
+              "highest_binding": "https",
+              "authentication": "origin-key",
+              "epoch": 1,
+              "public_key": "rvfodELbd45CXpY8meIGOl6GQtgIn2zd9Yu4MnLi2Kc",
+              "key_fingerprint": "sha256:f6cc17d1c5e501c3e0bcda62667dd1a88885f6a5f7b9aa0197ae0c39472b62c6",
+              "recovery_commitment": "ed25519-sha256:z3l4IwyfWCUDGgnl49pEiv40nXZ-isFREc8HGwlS9eQ",
+              "retired_key_fingerprints": []
+            }
+          ],
+          "opids": [
+            {
+              "opid": "https://merchant.example/pay",
+              "hostname": "merchant.example",
+              "revision": 7,
+              "record_fingerprint": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+              "target_projection": {
+                "options": [
+                  { "type": "sepa", "currency": "EUR", "iban": "NL91ABNA0417164300" }
+                ]
+              },
+              "target_fingerprint": "sha256:bff17957f6c9dc77b8973514dd5412c4158e3c3f58fba9eac54c1dfbbcfe5c4d",
+              "highest_binding": "https",
+              "authentication": "origin-key"
+            }
+          ]
+        }
+      },
+      "current": {
+        "hosts": [
+          {
+            "hostname": "alice.example",
+            "binding": "dnssec",
+            "authentication": "origin-key",
+            "epoch": 1,
+            "public_key": "4BPjEg_5Hk-SizZDNvUJi_xbHbd-zI67mDr5_BeQFuw",
+            "recovery_commitment": "none"
+          },
+          {
+            "hostname": "merchant.example",
+            "binding": "https",
+            "authentication": "origin-key",
+            "epoch": 1,
+            "public_key": "rvfodELbd45CXpY8meIGOl6GQtgIn2zd9Yu4MnLi2Kc",
+            "recovery_commitment": "ed25519-sha256:z3l4IwyfWCUDGgnl49pEiv40nXZ-isFREc8HGwlS9eQ"
+          }
+        ],
+        "opids": [
+          {
+            "opid": "https://alice.example/",
+            "hostname": "alice.example",
+            "revision": 4,
+            "record_fingerprint": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+            "target_projection": {
+              "options": [
+                {
+                  "type": "erc20",
+                  "currency": "EUR",
+                  "chain": "eip155:100",
+                  "asset": "0x1111111111111111111111111111111111111111",
+                  "recipient": "0x4444444444444444444444444444444444444444"
+                }
+              ]
+            },
+            "target_fingerprint": "sha256:40c7db95b8c53860efa91f0d7864dea6b7eddbb80b6a696fab18abf4b79c0b0b",
+            "binding": "dnssec",
+            "authentication": "origin-key"
+          },
+          {
+            "opid": "https://merchant.example/pay",
+            "hostname": "merchant.example",
+            "revision": 8,
+            "record_fingerprint": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+            "target_projection": {
+              "options": [
+                { "type": "sepa", "currency": "EUR", "iban": "NL91ABNA0417164300" }
+              ]
+            },
+            "target_fingerprint": "sha256:bff17957f6c9dc77b8973514dd5412c4158e3c3f58fba9eac54c1dfbbcfe5c4d",
+            "binding": "https",
+            "authentication": "origin-key"
+          }
+        ]
+      },
+      "expected": {
+        "result": "success",
+        "node_results": [
+          { "opid": "https://alice.example/", "history": "none", "continuity": "first-use" },
+          { "opid": "https://merchant.example/pay", "history": "available", "continuity": "bound" }
+        ],
+        "proposed_evidence": {
+          "version": 1,
+          "protocol": "OPAP/1",
+          "state": "available",
+          "evidence": {
+            "hosts": [
+              {
+                "hostname": "alice.example",
+                "highest_binding": "dnssec",
+                "authentication": "origin-key",
+                "epoch": 1,
+                "public_key": "4BPjEg_5Hk-SizZDNvUJi_xbHbd-zI67mDr5_BeQFuw",
+                "key_fingerprint": "sha256:fd60aab27953ed9a1cad137523e4ffeeb95240d1413e7545e0b7ad104c288dd5",
+                "recovery_commitment": "none",
+                "retired_key_fingerprints": []
+              },
+              {
+                "hostname": "merchant.example",
+                "highest_binding": "https",
+                "authentication": "origin-key",
+                "epoch": 1,
+                "public_key": "rvfodELbd45CXpY8meIGOl6GQtgIn2zd9Yu4MnLi2Kc",
+                "key_fingerprint": "sha256:f6cc17d1c5e501c3e0bcda62667dd1a88885f6a5f7b9aa0197ae0c39472b62c6",
+                "recovery_commitment": "ed25519-sha256:z3l4IwyfWCUDGgnl49pEiv40nXZ-isFREc8HGwlS9eQ",
+                "retired_key_fingerprints": []
+              }
+            ],
+            "opids": [
+              {
+                "opid": "https://alice.example/",
+                "hostname": "alice.example",
+                "revision": 4,
+                "record_fingerprint": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+                "target_projection": {
+                  "options": [
+                    {
+                      "type": "erc20",
+                      "currency": "EUR",
+                      "chain": "eip155:100",
+                      "asset": "0x1111111111111111111111111111111111111111",
+                      "recipient": "0x4444444444444444444444444444444444444444"
+                    }
+                  ]
+                },
+                "target_fingerprint": "sha256:40c7db95b8c53860efa91f0d7864dea6b7eddbb80b6a696fab18abf4b79c0b0b",
+                "highest_binding": "dnssec",
+                "authentication": "origin-key"
+              },
+              {
+                "opid": "https://merchant.example/pay",
+                "hostname": "merchant.example",
+                "revision": 8,
+                "record_fingerprint": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+                "target_projection": {
+                  "options": [
+                    { "type": "sepa", "currency": "EUR", "iban": "NL91ABNA0417164300" }
+                  ]
+                },
+                "target_fingerprint": "sha256:bff17957f6c9dc77b8973514dd5412c4158e3c3f58fba9eac54c1dfbbcfe5c4d",
+                "highest_binding": "https",
+                "authentication": "origin-key"
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}
