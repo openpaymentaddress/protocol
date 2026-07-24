@@ -152,16 +152,18 @@ Create `site/_headers`:
 ```text
 /.well-known/open-payment/record/*
   Access-Control-Allow-Origin: *
-  Access-Control-Expose-Headers: Content-Encoding, OPAP-Proof
+  Access-Control-Expose-Headers: Content-Encoding, OPAP-Proof, X-Content-Type-Options
   Cache-Control: no-store
   Content-Encoding: identity
   Content-Type: application/opap+json
+  X-Content-Type-Options: nosniff
 ```
 
 Do not redirect the record route. Do not use Pages Functions or `_worker.js`
 for this static project: `_headers` applies only to static assets; a
-function-based publisher must set these headers in code. Keep `OPAP-Proof` in
-the exposed-header list even for an unsigned record. See
+function-based publisher must set these headers in code. Keep `OPAP-Proof` and
+`X-Content-Type-Options` in the exposed-header list even for an unsigned record.
+See
 [Pages headers](https://developers.cloudflare.com/pages/configuration/headers/).
 
 ## 3. Sign the exact record bytes
@@ -296,10 +298,11 @@ Require:
 ```text
 status                              200
 Access-Control-Allow-Origin         *
-Access-Control-Expose-Headers       Content-Encoding, OPAP-Proof
+Access-Control-Expose-Headers       Content-Encoding, OPAP-Proof, X-Content-Type-Options
 Cache-Control                       no-store
 Content-Encoding                    identity
 Content-Type                        application/opap+json
+X-Content-Type-Options              nosniff
 OPAP-Proof                          v=1;sig=...   # signed profiles only
 Location                            absent
 body                                valid exact JSON, at most 65,536 bytes
