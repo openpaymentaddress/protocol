@@ -2,7 +2,7 @@
 
 **A URL-native, non-custodial address layer for payments**
 
-Protocol version 1 · 23 July 2026
+Protocol version 1 · 24 July 2026
 
 **Status:** Draft specification.
 
@@ -151,8 +151,19 @@ authorise an OPID on another host.
 
 `open-payment` is the application name relative to `/.well-known/` and MUST
 be registered in the IANA Well-Known URI Registry when this specification is
-released. `record/<path-key>` is additional path syntax defined by OPAP/1; it
-is not itself a registry name.
+released. The initial registration status is provisional. The change
+controller is the Open Payment Address protocol project.
+
+The registration applies only to the `https` scheme on its default port 443.
+The registered name is a non-empty RFC 3986 path segment. The required
+`record/<path-key>` suffix is additional path syntax defined by OPAP/1; it is
+not itself a registry name. OPAP/1 defines no representation at
+`/.well-known/open-payment` itself, and a record URL has no query or fragment.
+Sections 4.1, 5, and 6 define hostname selection and scope, the HTTPS retrieval
+profile, the representation, and its permitted media types.
+
+The reviewed registration request and its RFC 8615 conformance analysis are in
+[`open-payment-well-known-registration.md`](open-payment-well-known-registration.md).
 
 ## 5. Transport profile
 
@@ -161,21 +172,26 @@ and at least these headers:
 
 ```http
 Access-Control-Allow-Origin: *
-Access-Control-Expose-Headers: Content-Encoding, OPAP-Proof
+Access-Control-Expose-Headers: Content-Encoding, OPAP-Proof, X-Content-Type-Options
 Cache-Control: no-store
 Content-Encoding: identity
 Content-Type: application/opap+json
+X-Content-Type-Options: nosniff
 ```
 
 `application/json` with parameters is also permitted. The publisher MUST NOT
 require cookies, HTTP authentication, client certificates, or other credentials,
-and MUST NOT send `Access-Control-Allow-Credentials: true`.
+MUST NOT use ambient request credentials to select or vary a record, and MUST
+NOT send `Access-Control-Allow-Credentials: true`. Record paths are read-only;
+a publisher MUST NOT assign state-changing semantics to any HTTP method at
+those paths.
 
-The resolver MUST use HTTPS, validate TLS, request without credentials, require
-status `200`, reject redirects, require a permitted media type and explicit
-`Content-Encoding: identity`, reject duplicate JSON keys, and reject a body
-larger than 65,536 bytes or deeper than 32 JSON nesting levels. Each request
-MUST time out within ten seconds.
+The resolver MUST retrieve a record with HTTPS `GET`, validate TLS, request
+without credentials, require status `200`, reject redirects, require a
+permitted media type, explicit `Content-Encoding: identity`, and
+`X-Content-Type-Options: nosniff`, reject duplicate JSON keys, and reject a
+body larger than 65,536 bytes or deeper than 32 JSON nesting levels. Each
+request MUST time out within ten seconds.
 
 `404` or `410` is `record_not_found`; other transport failures are
 `record_unavailable`; an invalid `200` response is `invalid_record`.
@@ -846,6 +862,13 @@ Publish only data required to form the payment instruction. A URL path can revea
 a product or invoice identifier; use an opaque URL path when that is not
 acceptable. DNSSEC is optional because it adds operator responsibility, not
 because it changes the public nature of lookup.
+
+The record endpoint is intentionally accessible to browsers and CORS-readable.
+Scripts running elsewhere on the same origin may request it, so publishers
+MUST keep the endpoint read-only, credential-independent, and free of secrets.
+Operators MUST inventory and protect the route even when their server,
+deployment tool, or filesystem hides names beginning with a dot; the
+`.well-known` name is not an access-control mechanism.
 
 When suitable `available` prior evidence is supplied, continuity protects
 previously established exact-host trust; first use and resolutions with
